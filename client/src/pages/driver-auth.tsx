@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export default function DriverAuth() {
@@ -40,11 +40,18 @@ export default function DriverAuth() {
       return apiRequest("POST", endpoint, payload);
     },
     onSuccess: () => {
+      // Invalidate auth cache to trigger user data refetch
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      
       toast({
         title: "Success",
         description: isLogin ? "Logged in successfully" : "Driver account created successfully",
       });
-      setLocation("/");
+      
+      // Small delay to ensure cache invalidation completes
+      setTimeout(() => {
+        setLocation("/");
+      }, 100);
     },
     onError: (error) => {
       toast({
