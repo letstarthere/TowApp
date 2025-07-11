@@ -1,0 +1,182 @@
+## 🚨 Replit Project Prompt: **TOWAPP – Uber-Style Tow Truck App with Driver Portal**
+
+---
+
+### ✅ Overview:
+
+Build a **full-stack tow truck booking application** called **TOWAPP**, inspired by Uber. The app connects users in need of a tow with available drivers or towing companies. The system should have **two main portals**:
+
+* **User Portal** – for people who need a tow
+* **Driver Portal** – for tow truck drivers to manage pickups
+
+It must feature an **Uber-like layout** with a **live map**, **nearby vehicles**, and **real-time price display**.
+
+---
+
+### 🎨 Brand Identity
+
+* **App Name**: `TOWAPP`
+* **Official Colors**:
+
+  * Primary: `#ff7b29`
+  * Secondary: Black
+  * Background: White
+* **Logo**: Use provided image (`1.png`)
+
+---
+
+## 🧽 App Structure & Pages
+
+### 1. 🚀 **Splash Page**
+
+* Shows centered logo
+* “**Get Started**” button in `#ff7b29`
+* Takes user to a **role selection screen**
+
+---
+
+### 2. 🔑 **Login & Signup Page**
+
+* **Two buttons**:
+
+  * I’m a **User**
+  * I’m a **Driver**
+* Each opens their own login/signup screen
+* Fields for both:
+
+  * Email
+  * Phone number
+  * Continue button (`#ff7b29`)
+
+> After login:
+
+* **User** → taken to map showing **available tow trucks**
+* **Driver** → taken to **driver dashboard/map** showing **pickup requests**
+
+---
+
+### 3. 🗌️ **Main User Interface – Uber Layout**
+
+**For Users**:
+
+* **Live Map** centered on user’s location (Mapbox or Google Maps)
+* Nearby **tow trucks shown as car icons**
+* On tap, show:
+
+  * Driver/company name
+  * Fee (e.g., “R500”)
+  * ETA (e.g., “4 min away”)
+* "Request Tow" button in orange
+* User can enter drop-off location if needed
+
+**For Drivers**:
+
+* Live Map centered on driver location
+* Incoming tow requests pop up with:
+
+  * User location
+  * Destination (if set)
+  * Price
+  * “Accept” / “Decline” buttons
+
+---
+
+### 4. 👤 **Profile Page**
+
+* For both users and drivers
+* Fields:
+
+  * Name
+  * Email
+  * Phone
+  * Change Password
+* Drivers have:
+
+  * Vehicle type
+  * License plate
+  * Company name (optional)
+
+---
+
+## 🔧 Backend Features (Express / Flask)
+
+### 🚗 Driver Features:
+
+* Toggle “**Available / Unavailable**”
+* See list of active requests
+* Accept or decline tow requests
+* Update live location
+
+### 👤 User Features:
+
+* Find nearby drivers
+* Estimate fee by distance
+* Track tow truck arrival
+* View history of requests
+
+---
+
+## 📦 Project Structure (Full-Stack)
+
+```
+/towapp
+🔹📄 frontend/
+├─ pages/
+│  ├︎ Splash.jsx
+│  ├︎ RoleSelection.jsx
+│  ├︎ LoginUser.jsx
+│  ├︎ LoginDriver.jsx
+│  ├︎ MapUser.jsx
+│  └︎ MapDriver.jsx
+├︎ components/
+│  ├︎ ProfileCard.jsx
+│  ├︎ TowCard.jsx
+│  └︎ RequestModal.jsx
+🔹📄 backend/
+├︎ routes/
+│  ├︎ auth.js
+│  ├︎ driver.js
+│  └︎ user.js
+├︎ models/
+│  ├︎ User.js
+│  ├︎ Driver.js
+│  └︎ Request.js
+└︎ server.js
+```
+
+---
+
+### 🧪 Recommended Stack
+
+| Part     | Technology                     |
+| -------- | ------------------------------ |
+| Frontend | React + Tailwind CSS           |
+| Map      | Google Maps API or Mapbox      |
+| Auth     | Firebase or Passport.js        |
+| Backend  | Node.js + Express or Flask     |
+| Database | MongoDB / Firebase Realtime DB |
+
+---
+
+### 🧰 Advanced Features (Phase 2)
+
+* SMS notification on tow assignment
+* Ratings & reviews for drivers
+* Tow tracking screen
+* Trip history (User + Driver)
+* Real-time messaging between user & driver
+
+---
+
+### 📜 Uber Layout Reference
+
+Ensure your layout includes:
+
+* Fullscreen map view
+* Floating bottom cards for options
+* Navigation drawer/profile in top-left
+* Action buttons in bottom-right (e.g., request/accept)
+
+---
+
+Would you like boilerplate code generation next?
