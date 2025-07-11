@@ -1,11 +1,11 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertUserSchema, insertDriverSchema, insertRequestSchema } from "@shared/schema";
 import { z } from "zod";
 
-interface AuthenticatedRequest extends Express.Request {
+interface AuthenticatedRequest extends Request {
   user?: {
     id: number;
     email: string;
@@ -14,7 +14,7 @@ interface AuthenticatedRequest extends Express.Request {
 }
 
 // Simple session-based auth middleware
-const authenticate = (req: AuthenticatedRequest, res: Express.Response, next: Express.NextFunction) => {
+const authenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const sessionUser = (req.session as any)?.user;
   if (!sessionUser) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -40,8 +40,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (data.type === 'authenticate') {
           userId = data.userId;
-          clients.set(userId, ws);
-          ws.send(JSON.stringify({ type: 'authenticated', userId }));
+          if (userId) {
+            clients.set(userId, ws);
+            ws.send(JSON.stringify({ type: 'authenticated', userId }));
+          }
         } else if (data.type === 'location_update' && userId) {
           // Update driver location
           const user = await storage.getUser(userId);
@@ -84,20 +86,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Auth routes
-  app.post('/api/auth/register', async (req, res) => {
+  app.post('/api/auth/register', async (req: Request, res: Response) => {
     try {
-      const { email, phone, name, userType, driverData } = req.body;
+      const { email, phone, name, userType } = req.body;
+      
+      // Only allow user registration, drivers need to apply through official website
+      if (userType === 'driver') {
+        return res.status(400).json({ 
+          message: 'Driver applications must be submitted through our official website. Please visit towapp.com/apply' 
+        });
+      }
       
       const userData = insertUserSchema.parse({ email, phone, name, userType });
       const user = await storage.createUser(userData);
-      
-      if (userType === 'driver' && driverData) {
-        const driverDetails = insertDriverSchema.parse({
-          userId: user.id,
-          ...driverData
-        });
-        await storage.createDriver(driverDetails);
-      }
       
       (req.session as any).user = {
         id: user.id,
@@ -112,7 +113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/login', async (req, res) => {
+  app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
       const { email, phone } = req.body;
       
@@ -138,12 +139,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/logout', authenticate, (req, res) => {
+  app.post('/api/auth/logout', authenticate, (req: AuthenticatedRequest, res: Response) => {
     (req.session as any).user = null;
     res.json({ message: 'Logged out successfully' });
   });
 
-  app.get('/api/auth/me', authenticate, async (req, res) => {
+  app.get('/api/auth/me', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUser(req.user!.id);
       res.json(user);
@@ -153,7 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Driver routes
-  app.get('/api/drivers/nearby', authenticate, async (req, res) => {
+  app.get('/api/drivers/nearby', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { latitude, longitude, radius = 10 } = req.query;
       
@@ -173,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/drivers/availability', authenticate, async (req, res) => {
+  app.put('/api/drivers/availability', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { isAvailable } = req.body;
       const user = await storage.getUser(req.user!.id);
@@ -189,7 +190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/drivers/location', authenticate, async (req, res) => {
+  app.put('/api/drivers/location', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { latitude, longitude } = req.body;
       const user = await storage.getUser(req.user!.id);
@@ -206,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Request routes
-  app.post('/api/requests', authenticate, async (req, res) => {
+  app.post('/api/requests', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const requestData = insertRequestSchema.parse({
         userId: req.user!.id,
@@ -236,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/requests/:id/accept', authenticate, async (req, res) => {
+  app.put('/api/requests/:id/accept', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const requestId = parseInt(req.params.id);
       const user = await storage.getUser(req.user!.id);
@@ -262,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/requests/:id/status', authenticate, async (req, res) => {
+  app.put('/api/requests/:id/status', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const requestId = parseInt(req.params.id);
       const { status } = req.body;
@@ -283,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/requests/my', authenticate, async (req, res) => {
+  app.get('/api/requests/my', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUser(req.user!.id);
       let requests;
@@ -300,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/requests/pending', authenticate, async (req, res) => {
+  app.get('/api/requests/pending', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const requests = await storage.getPendingRequests();
       res.json(requests);
