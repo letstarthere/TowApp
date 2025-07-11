@@ -153,6 +153,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get Google Maps API key for frontend
+  app.get('/api/config/maps', (req: Request, res: Response) => {
+    res.json({
+      apiKey: process.env.GOOGLE_MAPS_API_KEY || ''
+    });
+  });
+
   // Driver routes
   app.get('/api/drivers/nearby', authenticate, async (req: AuthenticatedRequest, res: Response) => {
     try {

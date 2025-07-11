@@ -114,6 +114,7 @@ export default function UserProfile() {
             <Button
               variant="outline"
               className="w-full justify-between p-4 h-auto"
+              onClick={() => setLocation("/payment-methods")}
             >
               <div className="flex items-center">
                 <CreditCard className="w-5 h-5 mr-3 text-gray-600" />
@@ -125,6 +126,7 @@ export default function UserProfile() {
             <Button
               variant="outline"
               className="w-full justify-between p-4 h-auto"
+              onClick={() => setLocation("/trip-history")}
             >
               <div className="flex items-center">
                 <History className="w-5 h-5 mr-3 text-gray-600" />

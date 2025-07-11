@@ -13,6 +13,8 @@ import UserMap from "@/pages/user-map";
 import DriverMap from "@/pages/driver-map";
 import UserProfile from "@/pages/user-profile";
 import DriverProfile from "@/pages/driver-profile";
+import PaymentMethods from "@/pages/payment-methods";
+import TripHistory from "@/pages/trip-history";
 
 function Router() {
   const { user, isLoading } = useAuth();
@@ -44,6 +46,8 @@ function Router() {
             <>
               <Route path="/" component={UserMap} />
               <Route path="/profile" component={UserProfile} />
+              <Route path="/payment-methods" component={PaymentMethods} />
+              <Route path="/trip-history" component={TripHistory} />
             </>
           ) : (
             <>
