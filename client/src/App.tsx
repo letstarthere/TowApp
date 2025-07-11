@@ -17,6 +17,10 @@ import DriverProfile from "@/pages/driver-profile";
 function Router() {
   const { user, isLoading } = useAuth();
 
+  // Debug logging to see what user object looks like
+  console.log('Router - user:', user);
+  console.log('Router - isLoading:', isLoading);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
