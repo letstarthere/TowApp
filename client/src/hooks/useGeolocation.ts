@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Geolocation } from '@capacitor/geolocation';
 
 interface GeolocationPosition {
   latitude: number;
@@ -11,46 +12,51 @@ export function useGeolocation() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by this browser");
-      setIsLoading(false);
-      return;
-    }
-
-    const handleSuccess = (position: GeolocationPosition) => {
-      setLocation({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-      setError(null);
-      setIsLoading(false);
+    const fallbackLocation = {
+      latitude: -26.2041,
+      longitude: 28.0473
     };
 
-    const handleError = (error: GeolocationPositionError) => {
-      setError(error.message);
-      setIsLoading(false);
-    };
+    const getLocation = async () => {
+      try {
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 60000
+        });
+        
+        setLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setError(null);
+        setIsLoading(false);
 
-    navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
-      enableHighAccuracy: true,
-      timeout: 5000,
-      maximumAge: 0,
-    });
+        const watchId = await Geolocation.watchPosition({
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 60000
+        }, (position) => {
+          if (position) {
+            setLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+          }
+        });
 
-    // Watch position for continuous updates
-    const watchId = navigator.geolocation.watchPosition(
-      handleSuccess,
-      handleError,
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 30000,
+        return () => {
+          Geolocation.clearWatch({ id: watchId });
+        };
+      } catch (err) {
+        console.error('Geolocation error:', err);
+        setLocation(fallbackLocation);
+        setError(null);
+        setIsLoading(false);
       }
-    );
-
-    return () => {
-      navigator.geolocation.clearWatch(watchId);
     };
+
+    getLocation();
   }, []);
 
   return { location, error, isLoading };

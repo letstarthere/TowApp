@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { getApiUrl, USE_MOCK_DATA } from "./config";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -7,12 +8,28 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Mock data responses
+const mockResponses: Record<string, any> = {
+  '/api/user': { id: 1, name: 'Test User', email: 'test@example.com', userType: 'user' },
+  '/api/drivers/nearby': [],
+};
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  if (USE_MOCK_DATA) {
+    // Return mock response
+    const mockData = mockResponses[url] || { success: true };
+    return new Response(JSON.stringify(mockData), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  
+  const fullUrl = url.startsWith('http') ? url : getApiUrl(url);
+  const res = await fetch(fullUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -29,7 +46,15 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const url = queryKey.join("/") as string;
+    
+    if (USE_MOCK_DATA) {
+      // Return mock data
+      return mockResponses[url] || null;
+    }
+    
+    const fullUrl = url.startsWith('http') ? url : getApiUrl(url);
+    const res = await fetch(fullUrl, {
       credentials: "include",
     });
 

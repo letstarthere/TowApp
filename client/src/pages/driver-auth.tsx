@@ -39,7 +39,7 @@ export default function DriverAuth() {
       
       return apiRequest("POST", endpoint, payload);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate auth cache to trigger user data refetch
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       
@@ -48,9 +48,13 @@ export default function DriverAuth() {
         description: isLogin ? "Logged in successfully" : "Driver account created successfully",
       });
       
-      // Small delay to ensure cache invalidation completes
+      // Navigate to appropriate dashboard based on user type
       setTimeout(() => {
-        setLocation("/");
+        if (data.userType === 'driver') {
+          setLocation("/driver-map");
+        } else {
+          setLocation("/role-selection"); // Fallback
+        }
       }, 100);
     },
     onError: (error) => {

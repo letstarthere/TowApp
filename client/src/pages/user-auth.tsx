@@ -26,18 +26,13 @@ export default function UserAuth() {
       
       return apiRequest("POST", endpoint, payload);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate auth cache to trigger user data refetch
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       
-      toast({
-        title: "Success",
-        description: isLogin ? "Logged in successfully" : "Account created successfully",
-      });
-      
-      // Small delay to ensure cache invalidation completes
+      // Navigate to user dashboard
       setTimeout(() => {
-        setLocation("/");
+        setLocation("/user-map");
       }, 100);
     },
     onError: (error) => {

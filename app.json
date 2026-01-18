@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "TowTech",
+    "slug": "towtech",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["android"],
+    "android": {
+      "package": "com.towtech.app",
+      "versionCode": 1,
+      "permissions": []
+    }
+  }
+}

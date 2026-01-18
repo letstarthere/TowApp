@@ -289,6 +289,39 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return request;
   }
+
+  async updateRequestCompletion(id: number, completionData: {
+    postTowPhotoUrl?: string;
+    recipientName?: string;
+    recipientSignatureUrl?: string;
+    recipientIdPhotoUrl?: string;
+    actualPrice?: number;
+  }): Promise<Request> {
+    const [request] = await db
+      .update(requests)
+      .set({
+        ...completionData,
+        actualPrice: completionData.actualPrice?.toString(),
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(requests.id, id))
+      .returning();
+    return request;
+  }
+
+  async updateRequestRating(id: number, rating: number, feedback?: string): Promise<Request> {
+    const [request] = await db
+      .update(requests)
+      .set({
+        driverRating: rating,
+        userFeedback: feedback,
+        updatedAt: new Date(),
+      })
+      .where(eq(requests.id, id))
+      .returning();
+    return request;
+  }
 }
 
 export const storage = new DatabaseStorage();

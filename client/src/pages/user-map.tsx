@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
-import { User, History, Navigation, Star, Truck } from "lucide-react";
+import { User, History, Navigation, Star, Truck, ChevronDown, CreditCard, Search, X } from "lucide-react";
+import applePayLogo from "@assets/Apple_Pay-Logo.wine.svg";
+import mastercardLogo from "../../../attached_assets/mastercard.jpg";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,36 +14,290 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { useToast } from "@/hooks/use-toast";
 import Map from "@/components/map";
 import RequestModal from "@/components/request-modal";
+import SearchingDriver from "@/components/searching-driver";
+import DriverOnWay from "@/components/driver-on-way";
+import TowingInProgress from "@/components/towing-in-progress";
+import DrivingToDestination from "@/components/driving-to-destination";
+import DestinationArrived from "@/components/destination-arrived";
+import RoadAssistanceConcluded from "@/components/road-assistance-concluded";
 import TowTruckCard from "@/components/tow-truck-card";
-import type { DriverWithUser } from "@/lib/types";
+import type { DriverWithUser, MockDriver } from "@/lib/types";
 
 export default function UserMap() {
   const [, setLocation] = useLocation();
   const [pickupLocation, setPickupLocation] = useState("Current Location");
   const [dropoffLocation, setDropoffLocation] = useState("");
   const [showRequestModal, setShowRequestModal] = useState(false);
-  const [selectedDriver, setSelectedDriver] = useState<DriverWithUser | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<MockDriver | null>(null);
+  const [nearestDriver, setNearestDriver] = useState<MockDriver | null>(null);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [currentView, setCurrentView] = useState<'car' | 'location' | 'trucks' | 'confirm'>('car');
+  const [isBottomSheetVisible, setIsBottomSheetVisible] = useState(false);
+  const [isCardTransitioning, setIsCardTransitioning] = useState(false);
+  const [selectedStandardDriver, setSelectedStandardDriver] = useState<number>(1); // Auto-select first standard driver
+  const [isSearching, setIsSearching] = useState(false);
+  const [driverFound, setDriverFound] = useState(false);
+  const [assignedDriver, setAssignedDriver] = useState<any>(null);
+  const [driverAccepted, setDriverAccepted] = useState(false);
+  const [driverArrived, setDriverArrived] = useState(false);
+  const [towingInProgress, setTowingInProgress] = useState(false);
+  const [drivingToDestination, setDrivingToDestination] = useState(false);
+  const [destinationArrived, setDestinationArrived] = useState(false);
+  const [serviceCompleted, setServiceCompleted] = useState(false);
+  const [routePhase, setRoutePhase] = useState<'pickup' | 'delivery'>('pickup');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState('Apple Pay');
+  const [selectedPremiumProvider, setSelectedPremiumProvider] = useState<string | null>(null);
+  const [truckPricing, setTruckPricing] = useState<Record<number, number>>({});
+  const [dragHeight, setDragHeight] = useState(40); // Height as percentage
+  const [isDragging, setIsDragging] = useState(false);
+  const [startY, setStartY] = useState(0);
+  const [startHeight, setStartHeight] = useState(40);
+  const dropoffInputRef = useRef<HTMLInputElement>(null);
+  const [autocomplete, setAutocomplete] = useState<any>(null);
   
   const { user } = useAuth();
   const { location, error: locationError } = useGeolocation();
   const { toast } = useToast();
   
+  // Animate bottom sheet on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsBottomSheetVisible(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+  
   // WebSocket connection
   useWebSocket(user?.id || 0, (message) => {
     if (message.type === 'request_accepted') {
-      toast({
-        title: "Request Accepted!",
-        description: `${message.request.driver?.user.name} is on the way`,
-      });
+      const driver = {
+        id: 1,
+        name: 'Sean Bampoe',
+        vehicleType: 'Flatbed Truck',
+        licensePlate: 'GT-1234-GP',
+        rating: 4.8,
+        phone: '+27123456700',
+        currentLatitude: -25.7483, // 9 Havelock Rd, Willow Park Manor, Pretoria
+        currentLongitude: 28.2299
+      };
+      
+      setAssignedDriver(driver);
+      setDriverAccepted(true);
+      setIsSearching(false);
+      setDriverFound(false);
+      setShowRequestModal(false);
     }
   });
 
-  // Fetch nearby drivers
-  const { data: nearbyDrivers, isLoading: driversLoading } = useQuery({
-    queryKey: ['/api/drivers/nearby', location?.latitude, location?.longitude],
-    enabled: !!location,
-    refetchInterval: 10000, // Refetch every 10 seconds
-  });
+  // Load Google Maps and initialize autocomplete
+  useEffect(() => {
+    const loadGoogleMaps = async () => {
+      if (window.google?.maps?.places) {
+        initAutocomplete();
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/config/maps');
+        const config = await response.json();
+        
+        if (!config.apiKey) return;
+        
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${config.apiKey}&libraries=places`;
+        script.async = true;
+        script.onload = () => initAutocomplete();
+        document.head.appendChild(script);
+      } catch (error) {
+        console.error('Failed to load Google Maps:', error);
+      }
+    };
+    
+    const initAutocomplete = () => {
+      if (window.google?.maps?.places && dropoffInputRef.current && !autocomplete) {
+        const autocompleteInstance = new window.google.maps.places.Autocomplete(
+          dropoffInputRef.current,
+          {
+            componentRestrictions: { country: 'za' },
+            fields: ['place_id', 'geometry', 'name', 'formatted_address']
+          }
+        );
+        
+        autocompleteInstance.addListener('place_changed', () => {
+          const place = autocompleteInstance.getPlace();
+          if (place.formatted_address) {
+            setDropoffLocation(place.formatted_address);
+          }
+        });
+        
+        setAutocomplete(autocompleteInstance);
+      }
+    };
+    
+    loadGoogleMaps();
+  }, [autocomplete]);
+
+  // Load service selection from localStorage
+  useEffect(() => {
+    const requestType = localStorage.getItem('requestType');
+    const pickup = localStorage.getItem('pickupLocation');
+    const dropoff = localStorage.getItem('dropoffLocation');
+    
+    setPickupLocation(pickup || 'Current Location');
+    setDropoffLocation(dropoff || '');
+  }, []);
+
+  // Calculate dynamic pricing for all trucks
+  useEffect(() => {
+    if (!location) return;
+
+    const calculatePricing = async () => {
+      const carType = localStorage.getItem('carType') || 'sedan';
+      const distanceInKm = 12; // Mock distance
+      
+      const pricingPromises = allDrivers.map(async (driver) => {
+        try {
+          const baseFare = 300;
+          const transactionFee = 30;
+          const baseKmRate = driver.towType === 'hook' ? 20 : 22.5;
+          const vehicleMultiplier = carType.toLowerCase() === 'suv' || carType.toLowerCase().includes('bakkie') ? 1.2 : 1.0;
+          
+          const timeModifier = calculateTimeModifier();
+          const adjustedKmRate = baseKmRate * 1.15 * vehicleMultiplier * timeModifier;
+          const distanceCost = adjustedKmRate * distanceInKm;
+          const tripSubtotal = baseFare + transactionFee + distanceCost;
+          const bookingFee = tripSubtotal * 0.08;
+          let totalFare = tripSubtotal + bookingFee;
+          
+          if (driver.premiumProvider === 'Outsurance') {
+            totalFare = totalFare * 1.15;
+          } else if (driver.premiumProvider === 'FirstHelp') {
+            totalFare = totalFare * 1.18;
+          }
+          
+          return { id: driver.id, price: Math.round(totalFare) };
+        } catch (error) {
+          return { id: driver.id, price: 350 };
+        }
+      });
+      
+      const results = await Promise.all(pricingPromises);
+      const pricingMap = results.reduce((acc, { id, price }) => {
+        acc[id] = price;
+        return acc;
+      }, {} as Record<number, number>);
+      
+      setTruckPricing(pricingMap);
+    };
+
+    calculatePricing();
+  }, [location]);
+
+  const calculateTimeModifier = (): number => {
+    const now = new Date();
+    const hour = now.getHours();
+    
+    if (hour >= 6 && hour <= 18) {
+      return 1.0; // Normal hours
+    } else if (hour >= 19 && hour <= 21) {
+      return 1.1; // Evening
+    } else if (hour >= 22 || hour <= 4) {
+      return 1.25; // Late night / after-hours
+    } else if (hour === 5) {
+      return 1.15; // Early morning
+    }
+    
+    return 1.0; // Fallback
+  };
+
+  const standardDrivers: MockDriver[] = [
+    {
+      id: 1,
+      type: 'standard',
+      name: 'Standard Tow Service',
+      towType: 'hook',
+      eta: '15-20 min',
+      rating: 4.2,
+      currentLatitude: -26.1956,
+      currentLongitude: 28.0342
+    },
+    {
+      id: 4,
+      type: 'standard',
+      name: 'Flatbed Tow Truck',
+      towType: 'flatbed',
+      eta: '18-25 min',
+      rating: 4.3,
+      currentLatitude: -26.2100,
+      currentLongitude: 28.0500
+    },
+    {
+      id: 5,
+      type: 'standard',
+      name: 'Hook-and-Chain Tow Truck',
+      towType: 'hook',
+      eta: '12-18 min',
+      rating: 4.1,
+      currentLatitude: -26.1800,
+      currentLongitude: 28.0200
+    }
+  ];
+
+  const premiumDrivers: (MockDriver & { premiumProvider: string })[] = [
+    {
+      id: 2,
+      type: 'premium',
+      name: 'Outsurance',
+      towType: 'flatbed',
+      eta: '8-12 min',
+      rating: 4.9,
+      premiumProvider: 'Outsurance',
+      currentLatitude: -25.7483,
+      currentLongitude: 28.2299
+    },
+    {
+      id: 3,
+      type: 'premium', 
+      name: 'FirstHelp',
+      towType: 'hook',
+      eta: '10-15 min',
+      rating: 4.8,
+      premiumProvider: 'FirstHelp',
+      currentLatitude: -25.7490,
+      currentLongitude: 28.2315
+    },
+    {
+      id: 6,
+      type: 'premium', 
+      name: 'MiWay',
+      towType: 'flatbed',
+      eta: '12-18 min',
+      rating: 4.7,
+      premiumProvider: 'MiWay',
+      currentLatitude: -25.7500,
+      currentLongitude: 28.2280
+    }
+  ];
+  
+  let allDrivers: MockDriver[] = [...standardDrivers, ...premiumDrivers];
+  const nearbyDrivers = allDrivers;
+  const driversLoading = false;
+
+  // Find nearest driver automatically after login
+  useEffect(() => {
+    if (location && allDrivers.length > 0 && !nearestDriver) {
+      const distances = allDrivers.map(driver => {
+        const distance = Math.sqrt(
+          Math.pow(location.latitude - (driver.currentLatitude || 0), 2) +
+          Math.pow(location.longitude - (driver.currentLongitude || 0), 2)
+        );
+        return { driver, distance };
+      });
+      const nearest = distances.sort((a, b) => a.distance - b.distance)[0]?.driver;
+      setNearestDriver(nearest);
+    }
+  }, [location, nearbyDrivers, nearestDriver]);
 
   // Create request mutation
   const createRequestMutation = useMutation({
@@ -64,27 +320,412 @@ export default function UserMap() {
     },
   });
 
-  const handleDriverSelect = (driver: DriverWithUser) => {
-    setSelectedDriver(driver);
-    setShowRequestModal(true);
+  const [selectedCar, setSelectedCar] = useState<'current' | 'different' | null>('current');
+  const [showCarDetails, setShowCarDetails] = useState(false);
+  const [carPhotos, setCarPhotos] = useState<{[key: string]: string}>({});
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [currentPhotoSide, setCurrentPhotoSide] = useState<string>('');
+  const [vehicleSearch, setVehicleSearch] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  const [licensePlate, setLicensePlate] = useState('');
+  
+  // Vehicle database for fuzzy search
+  const vehicleDatabase = [
+    // Toyota
+    { name: 'Corolla', category: 'Sedan', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Corolla Quest', category: 'Sedan', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Camry', category: 'Sedan', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Hilux', category: 'Bakkie', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'Fortuner', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'RAV4', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '4WD' },
+    { name: 'Prado', category: 'SUV', towClass: 'Heavy', axleCount: 2, driveType: '4WD' },
+    { name: 'Yaris', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Avanza', category: 'MPV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    
+    // Volkswagen
+    { name: 'Polo', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Golf', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Jetta', category: 'Sedan', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Tiguan', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'Amarok', category: 'Bakkie', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // BMW
+    { name: 'BMW 1 Series', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'BMW 3 Series', category: 'Sedan', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'BMW 5 Series', category: 'Sedan', towClass: 'Medium', axleCount: 2, driveType: '2WD' },
+    { name: 'BMW X1', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '4WD' },
+    { name: 'BMW X3', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'BMW X5', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // Ford
+    { name: 'Ranger', category: 'Bakkie', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'EcoSport', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Everest', category: 'SUV', towClass: 'Heavy', axleCount: 2, driveType: '4WD' },
+    { name: 'Fiesta', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Focus', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    
+    // Nissan
+    { name: 'Micra', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Almera', category: 'Sedan', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Qashqai', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'X-Trail', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'Navara', category: 'Bakkie', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // Hyundai
+    { name: 'i10', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'i20', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Accent', category: 'Sedan', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Tucson', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'Creta', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    
+    // Kia
+    { name: 'Picanto', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Rio', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Cerato', category: 'Sedan', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Sportage', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'Sorento', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // Honda
+    { name: 'Brio', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Ballade', category: 'Sedan', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Civic', category: 'Sedan', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'HR-V', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'CR-V', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // Mazda
+    { name: 'Mazda2', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Mazda3', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'CX-3', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'CX-5', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // Isuzu
+    { name: 'D-Max', category: 'Bakkie', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'MU-X', category: 'SUV', towClass: 'Heavy', axleCount: 2, driveType: '4WD' },
+    
+    // Mitsubishi
+    { name: 'Mirage', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'ASX', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Outlander', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'Triton', category: 'Bakkie', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // Suzuki
+    { name: 'Swift', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Vitara', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '4WD' },
+    { name: 'Jimny', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '4WD' },
+    
+    // Renault
+    { name: 'Kwid', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Sandero', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Duster', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '4WD' },
+    
+    // Chevrolet
+    { name: 'Spark', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Aveo', category: 'Sedan', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Captiva', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // Mahindra
+    { name: 'KUV100', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'XUV300', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Scorpio', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'Pik Up', category: 'Bakkie', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // Haval
+    { name: 'H1', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'H2', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'H6', category: 'SUV', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // GWM
+    { name: 'Steed', category: 'Bakkie', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    { name: 'P Series', category: 'Bakkie', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // Datsun
+    { name: 'Go', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Go+', category: 'MPV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    
+    // Chery
+    { name: 'QQ', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Tiggo', category: 'SUV', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    
+    // JAC
+    { name: 'J2', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'T6', category: 'Bakkie', towClass: 'Medium', axleCount: 2, driveType: '4WD' },
+    
+    // Tata
+    { name: 'Bolt', category: 'Hatchback', towClass: 'Light', axleCount: 2, driveType: '2WD' },
+    { name: 'Xenon', category: 'Bakkie', towClass: 'Medium', axleCount: 2, driveType: '4WD' }
+  ];
+  
+  const fuzzySearch = (query: string) => {
+    if (!query) return [];
+    const lowerQuery = query.toLowerCase();
+    return vehicleDatabase
+      .filter(vehicle => 
+        vehicle.name.toLowerCase().includes(lowerQuery) ||
+        vehicle.category.toLowerCase().includes(lowerQuery)
+      )
+      .sort((a, b) => {
+        const aStartsWith = a.name.toLowerCase().startsWith(lowerQuery);
+        const bStartsWith = b.name.toLowerCase().startsWith(lowerQuery);
+        if (aStartsWith && !bStartsWith) return -1;
+        if (!aStartsWith && bStartsWith) return 1;
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, 8);
+  };
+  
+  const handleVehicleSelect = (vehicle: any) => {
+    setSelectedVehicle(vehicle);
+    setVehicleSearch(vehicle.name);
+    setShowSuggestions(false);
+  };
+  
+  const handlePhotoCapture = async (side: string) => {
+    setCurrentPhotoSide(side);
+    setShowCameraModal(true);
+  };
+  
+  const takePicture = async () => {
+    try {
+      setIsUploadingPhoto(true);
+      
+      // Use Capacitor Camera plugin for better mobile support
+      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
+      
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+      });
+      
+      if (image.dataUrl) {
+        setCarPhotos(prev => ({ ...prev, [currentPhotoSide]: image.dataUrl! }));
+        toast({
+          title: "Photo captured",
+          description: `${currentPhotoSide} photo captured successfully`
+        });
+      }
+      
+      setShowCameraModal(false);
+      setIsUploadingPhoto(false);
+    } catch (error) {
+      console.error('Camera error:', error);
+      toast({
+        title: "Camera Error",
+        description: "Unable to access camera. Please check permissions.",
+        variant: "destructive"
+      });
+      setShowCameraModal(false);
+      setIsUploadingPhoto(false);
+    }
+  };
+  
+  const selectFromGallery = async () => {
+    try {
+      setIsUploadingPhoto(true);
+      
+      // Use Capacitor Camera plugin for gallery access
+      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
+      
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Photos,
+      });
+      
+      if (image.dataUrl) {
+        setCarPhotos(prev => ({ ...prev, [currentPhotoSide]: image.dataUrl! }));
+        toast({
+          title: "Photo selected",
+          description: `${currentPhotoSide} photo selected from gallery`
+        });
+      }
+      
+      setShowCameraModal(false);
+      setIsUploadingPhoto(false);
+    } catch (error) {
+      console.error('Gallery error:', error);
+      toast({
+        title: "Gallery Error",
+        description: "Unable to access photo gallery. Please check permissions.",
+        variant: "destructive"
+      });
+      setShowCameraModal(false);
+      setIsUploadingPhoto(false);
+    }
   };
 
-  const handleRequestConfirm = () => {
+  const isPhotosComplete = () => {
+    const requiredSides = ['Front', 'Back', 'Left Side', 'Right Side'];
+    return requiredSides.every(side => carPhotos[side]);
+  };
+
+  const currentCar = {
+    make: 'Toyota',
+    model: 'Camry',
+    year: '2020',
+    color: 'Silver',
+    licensePlate: 'ABC-123-GP',
+    vin: 'JT2BF28K123456789',
+    vehicleType: 'Sedan'
+  };
+
+  const [recentLocations] = useState([
+    'Sandton City Mall, Johannesburg',
+    'OR Tambo International Airport',
+    'Mall of Africa, Midrand',
+    'Menlyn Park Shopping Centre, Pretoria'
+  ]);
+
+  const handleCarSelect = (carType: 'current' | 'different') => {
+    setSelectedCar(carType);
+    if (carType === 'different') {
+      setShowCarDetails(true);
+      setDragHeight(95);
+    } else {
+      setShowCarDetails(true);
+      setDragHeight(80);
+    }
+  };
+
+  const handleCarConfirm = () => {
+    setCurrentView('location');
+    setDragHeight(40);
+    setShowCarDetails(false);
+  };
+
+  const handleLocationSelect = (location: string) => {
+    setDropoffLocation(location);
+    setCurrentView('trucks');
+    setDragHeight(80); // Auto-expand to 80% when showing trucks
+  };
+
+  const handleDriverSelect = (driver: MockDriver) => {
+    setSelectedDriver(driver);
+    setIsCardTransitioning(true);
+    setCurrentView('confirm');
+    setDragHeight(80); // Set to 80% for confirm view
+    
+    // Reset blur after transition completes
+    setTimeout(() => {
+      setIsCardTransitioning(false);
+    }, 1000);
+  };
+
+  const handleBackToTrucks = () => {
+    setCurrentView('trucks');
+  };
+
+  const handleBackToLocation = () => {
+    setCurrentView('location');
+    setDragHeight(40); // Slide back down to show more map
+  };
+
+  const handleRequestConfirm = async () => {
     if (!location || !selectedDriver) return;
 
-    const requestData = {
-      pickupLatitude: location.latitude,
-      pickupLongitude: location.longitude,
-      pickupAddress: pickupLocation,
-      estimatedPrice: 350, // Calculate based on distance
-    };
+    // Clear dropoff location to trigger pill transition
+    setDropoffLocation('');
+    
+    setIsSearching(true);
+    setDragHeight(40); // Slide down to 40% when searching
+    
+    // For testing, simulate the request process
+    setTimeout(() => {
+      // Simulate sending request to driver (this would trigger WebSocket in real app)
+      console.log('Request sent to driver:', selectedDriver.name);
+      
+      // For testing, auto-accept after 3 seconds
+      setTimeout(() => {
+        const driver = {
+          id: 1,
+          name: 'Sean Bampoe',
+          vehicleType: 'Flatbed Truck',
+          licensePlate: 'GT-1234-GP',
+          rating: 4.8,
+          phone: '+27123456700',
+          currentLatitude: -25.7483, // 9 Havelock Rd, Willow Park Manor, Pretoria
+          currentLongitude: 28.2299
+        };
+        
+        setAssignedDriver(driver);
+        setDriverAccepted(true);
+        setIsSearching(false);
+        setDriverFound(false);
+        setRoutePhase('pickup');
+        
+        // Simulate driver arrival after 10 seconds
+        setTimeout(() => {
+          setDriverArrived(true);
+          setRoutePhase('delivery');
+          
+          // Start towing process after 10 more seconds
+          setTimeout(() => {
+            setTowingInProgress(true);
+            setDragHeight(80);
+          }, 10000);
+        }, 10000);
+      }, 3000);
+    }, 1000);
+  };
 
-    if (dropoffLocation) {
-      // In a real app, you'd geocode the dropoff address
-      requestData.dropoffAddress = dropoffLocation;
+  const handleDragStart = (e: React.TouchEvent | React.MouseEvent) => {
+    setIsDragging(true);
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setStartY(clientY);
+    setStartHeight(dragHeight);
+  };
+
+  const handleDragMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!isDragging) return;
+    
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const deltaY = startY - clientY;
+    const windowHeight = window.innerHeight;
+    const deltaPercent = (deltaY / windowHeight) * 100;
+    
+    let newHeight = startHeight + deltaPercent;
+    newHeight = Math.max(20, Math.min(80, newHeight)); // Limit between 20% and 80%
+    
+    setDragHeight(newHeight);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    
+    // Define snap positions based on current view
+    const snapPositions = currentView === 'location' ? [20, 40] : currentView === 'car' && showCarDetails && selectedCar === 'different' ? [95] : currentView === 'car' && showCarDetails ? [80] : [20, 40, 80];
+    
+    // Find closest snap position
+    let closestPosition = snapPositions[0];
+    let minDistance = Math.abs(dragHeight - snapPositions[0]);
+    
+    for (const position of snapPositions) {
+      const distance = Math.abs(dragHeight - position);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPosition = position;
+      }
     }
+    
+    setDragHeight(closestPosition);
+    setIsMinimized(closestPosition === 20);
+  };
 
-    createRequestMutation.mutate(requestData);
+  const getBrandColors = (provider: string) => {
+    switch (provider) {
+      case 'Outsurance':
+        return 'bg-green-600 text-white border-green-600';
+      case 'FirstHelp':
+        return 'bg-gradient-to-r from-black to-red-600 text-white border-red-600';
+      case 'MiWay':
+        return 'bg-pink-500 text-white border-pink-500';
+      default:
+        return 'border-gray-200';
+    }
   };
 
   const handleProfileClick = () => {
@@ -102,7 +743,7 @@ export default function UserMap() {
             </p>
             <Button 
               onClick={() => window.location.reload()}
-              className="bg-towapp-orange hover:bg-orange-600"
+              className="bg-orange-500 hover:bg-orange-600"
             >
               Retry
             </Button>
@@ -113,117 +754,1012 @@ export default function UserMap() {
   }
 
   return (
-    <div className="min-h-screen bg-white relative">
-      {/* Map Container */}
-      <div className="h-screen relative">
-        <Map
-          center={location ? { lat: location.latitude, lng: location.longitude } : undefined}
-          drivers={nearbyDrivers || []}
-          userLocation={location}
-          onDriverClick={handleDriverSelect}
+    <>
+      {/* Road Assistance Concluded - Full Screen */}
+      {serviceCompleted ? (
+        <RoadAssistanceConcluded
+          driver={{
+            ...assignedDriver,
+            type: selectedDriver?.type || 'standard',
+            premiumProvider: selectedPremiumProvider || undefined
+          }}
+          serviceDetails={{
+            pickupLocation,
+            dropoffLocation,
+            distance: '2.5 km',
+            totalCost: truckPricing[selectedDriver?.id || 1] || 350,
+            bookingFee: Math.round((truckPricing[selectedDriver?.id || 1] || 350) * 0.15),
+            cancellationFee: 50,
+            serviceDate: new Date().toLocaleDateString(),
+            serviceTime: new Date().toLocaleTimeString()
+          }}
+          onComplete={() => {
+            // Reset all states and go back to initial view
+            setServiceCompleted(false);
+            setDestinationArrived(false);
+            setDrivingToDestination(false);
+            setTowingInProgress(false);
+            setDriverAccepted(false);
+            setAssignedDriver(null);
+            setCurrentView('car');
+            setDragHeight(40);
+          }}
         />
-        
-        {/* Top Navigation */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 bg-white bg-opacity-95 backdrop-blur-sm">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleProfileClick}
-            className="w-10 h-10 rounded-full bg-white shadow-lg hover:bg-gray-50"
-          >
-            <User className="w-5 h-5 text-gray-600" />
-          </Button>
-          <h1 className="text-lg font-semibold text-towapp-black">Find Tow Truck</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-10 h-10 rounded-full bg-white shadow-lg hover:bg-gray-50"
-          >
-            <History className="w-5 h-5 text-gray-600" />
-          </Button>
-        </div>
-        
-        {/* Location Button */}
-        <div className="absolute top-20 right-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-12 h-12 bg-white rounded-full shadow-lg hover:bg-gray-50"
-            onClick={() => window.location.reload()}
-          >
-            <Navigation className="w-5 h-5 text-gray-600" />
-          </Button>
-        </div>
-        
-        {/* Bottom Card */}
-        <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6 shadow-2xl">
-          <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-6"></div>
+      ) : (
+        <div className="min-h-screen bg-white relative">
+        {/* Map Container */}
+        <div className={`relative transition-all duration-300 ${isMinimized ? 'h-[calc(100vh-5rem)]' : 'h-[60vh]'}`}>
+          <Map
+            center={location ? { lat: location.latitude, lng: location.longitude } : undefined}
+            drivers={[]}
+            userLocation={location}
+            onDriverClick={() => {}}
+            selectedDriver={null}
+            isMinimized={isMinimized}
+            destination={dropoffLocation}
+            driverLocation={assignedDriver ? {
+              latitude: assignedDriver.currentLatitude,
+              longitude: assignedDriver.currentLongitude
+            } : undefined}
+            showRoute={driverAccepted}
+            routePhase={routePhase}
+          />
           
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <Input
-                value={pickupLocation}
-                onChange={(e) => setPickupLocation(e.target.value)}
-                className="flex-1 bg-gray-100 px-4 py-3 rounded-xl border-0"
-                placeholder="Your location"
-              />
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <Input
-                value={dropoffLocation}
-                onChange={(e) => setDropoffLocation(e.target.value)}
-                className="flex-1 bg-gray-100 px-4 py-3 rounded-xl border-0"
-                placeholder="Drop-off location (optional)"
-              />
-            </div>
-            
-            <Card className="bg-gray-50">
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-towapp-black mb-2">Available Tow Trucks</h3>
-                
-                {driversLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-towapp-orange"></div>
+          {/* Top Navigation */}
+          <div className={`absolute top-0 left-0 right-0 flex items-center p-4 z-10 transition-opacity duration-300 ${
+            currentView === 'car' && showCarDetails && selectedCar === 'different' ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}>
+            {/* Profile/Address Pill */}
+            <div className={`transition-all duration-500 ease-in-out bg-white shadow-lg flex items-center ${
+              (currentView === 'location' || currentView === 'car') || !dropoffLocation
+                ? 'w-10 h-10 rounded-full' 
+                : 'w-full max-w-sm h-12 rounded-full px-4'
+            }`}>
+              {(currentView === 'location' || currentView === 'car') || !dropoffLocation ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <User className="w-5 h-5 text-gray-600" />
+                </div>
+              ) : (
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center space-x-2 flex-1 min-w-0 ml-2">
+                    <span className="text-sm font-medium text-gray-800 truncate">{dropoffLocation}</span>
                   </div>
-                ) : nearbyDrivers?.length === 0 ? (
-                  <p className="text-gray-600 text-center py-4">No tow trucks available nearby</p>
-                ) : (
-                  <div className="space-y-3">
-                    {nearbyDrivers?.map((driver) => (
-                      <TowTruckCard
-                        key={driver.id}
-                        driver={driver}
-                        onSelect={() => handleDriverSelect(driver)}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleBackToLocation}
+                    className="w-6 h-6 p-0 rounded-full hover:bg-gray-100 flex-shrink-0 ml-2"
+                  >
+                    <X className="w-4 h-4 text-gray-600" />
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            {/* History Icon - only show in location view */}
+            {(currentView === 'location' || currentView === 'car') && (
+              <div className="ml-auto">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setLocation('/trip-history')}
+                  className="w-10 h-10 rounded-full bg-white shadow-lg hover:bg-gray-50"
+                >
+                  <History className="w-5 h-5 text-gray-600" />
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {/* Location Button - only show in location view */}
+          {currentView === 'location' && (
+            <div className="absolute top-20 right-4 z-10">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-12 h-12 bg-white rounded-full shadow-lg hover:bg-gray-50"
+                onClick={() => {
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 100);
+                }}
+              >
+                <Navigation className="w-5 h-5 text-gray-600" />
+              </Button>
+            </div>
+          )}
+        </div>
+        
+        {/* Bottom Sheet */}
+        {/* Bottom Sheet */}
+        <div 
+          className={`fixed left-0 right-0 shadow-2xl transition-all duration-500 ease-out z-50 overflow-hidden ${
+            isBottomSheetVisible ? 'translate-y-0' : 'translate-y-full'
+          }`}
+          style={{ 
+            bottom: 0, 
+            height: `${dragHeight}vh`,
+            transform: isDragging ? 'none' : undefined,
+            background: 'white',
+            borderTopLeftRadius: '1.5rem',
+            borderTopRightRadius: '1.5rem'
+          }}
+        >
+          {/* Drag Handle */}
+          {!isSearching && (
+            <div 
+              className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-4 cursor-grab active:cursor-grabbing hover:bg-gray-400 transition-colors"
+              onMouseDown={handleDragStart}
+              onTouchStart={handleDragStart}
+              onTouchMove={handleDragMove}
+              onTouchEnd={handleDragEnd}
+            ></div>
+          )}
+          
+          {/* Driver Accepted State */}
+          {destinationArrived ? (
+            <DestinationArrived
+              onComplete={() => {
+                setDestinationArrived(false);
+                setServiceCompleted(true);
+              }}
+            />
+          ) : towingInProgress ? (
+            <TowingInProgress
+              onComplete={() => {
+                setTowingInProgress(false);
+                setDrivingToDestination(true);
+                setDragHeight(40);
+              }}
+            />
+          ) : drivingToDestination ? (
+            <DrivingToDestination
+              driver={assignedDriver}
+              onDriverNotified={(name, number) => {
+                console.log(`Driver notified: Delegate ${name} (${number}) will receive the vehicle`);
+              }}
+              onDestinationArrived={() => {
+                setDrivingToDestination(false);
+                setDestinationArrived(true);
+                setDragHeight(80);
+              }}
+            />
+          ) : driverAccepted && assignedDriver && location ? (
+            <DriverOnWay
+              driver={assignedDriver}
+              userLocation={location}
+              estimatedArrival="8-12 min"
+              hasArrived={driverArrived}
+            />
+          ) : isSearching ? (
+            <div className="px-6 pb-6 h-full flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+              <h2 className="text-xl font-bold text-black mb-2">
+                Looking for the nearest available driver...
+              </h2>
+              <p className="text-gray-600">
+                Please wait while we find you a driver
+              </p>
+            </div>
+          ) : isMinimized ? (
+            <div className="px-6 pb-4">
+              {currentView === 'car' ? (
+                <div>
+                  <h3 className="font-bold text-black mb-4 text-lg">Vehicle Information</h3>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-semibold">{currentCar.make} {currentCar.model}</p>
+                      <p className="text-sm text-gray-600">{currentCar.year} • {currentCar.color}</p>
+                    </div>
+                    <p className="text-sm text-gray-600">{currentCar.licensePlate}</p>
+                  </div>
+                </div>
+              ) : currentView === 'location' ? (
+                <div>
+                  <h3 className="font-bold text-black mb-4 text-lg">Where should the vehicle be taken?</h3>
+                  <div className="relative">
+                    <Input
+                      ref={dropoffInputRef}
+                      placeholder="Enter destination"
+                      value={dropoffLocation}
+                      onChange={(e) => setDropoffLocation(e.target.value)}
+                      className="w-full p-4 pr-12 text-lg border-2 border-gray-200 rounded-xl"
+                    />
+                    <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  </div>
+                </div>
+              ) : currentView === 'confirm' && selectedDriver ? (
+                <div>
+                  {/* Add towing car image for standard services */}
+                  {selectedDriver.type !== 'premium' && (
+                    <div className="flex justify-center mb-4">
+                      <img 
+                        src="../../../attached_assets/towing-car.svg" 
+                        alt="Towing Car" 
+                        className="w-16 h-16 object-contain"
                       />
-                    ))}
+                    </div>
+                  )}
+                  
+                  <Card 
+                    className={`p-3 mb-4 ${
+                      selectedDriver.type === 'premium' 
+                        ? getBrandColors(selectedPremiumProvider || '') 
+                        : 'border-2 border-orange-500 bg-white'
+                    }`}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold">{selectedDriver.name}</p>
+                          <p className={`text-sm ${
+                            selectedDriver.type === 'premium' ? 'opacity-90' : 'text-gray-600'
+                          }`}>{selectedDriver.eta} • ⭐ {selectedDriver.rating}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Distance</span>
+                          <span className="font-medium">2.5 km</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Booking Fee (%)</span>
+                          <span className="font-medium">15%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Cancellation Fee</span>
+                          <span className="font-medium">R50</span>
+                        </div>
+                        <div className="border-t pt-1 flex justify-between">
+                          <span className="text-gray-600">Payment:</span>
+                          <span className={`font-bold ${
+                            selectedDriver.type === 'premium' ? '' : 'text-orange-500'
+                          }`}>R{truckPricing[selectedDriver.id] || 350}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                  
+                  <div className="mb-4">
+                    <div 
+                      className="flex items-center space-x-2 text-sm text-blue-600 cursor-pointer hover:underline"
+                      onClick={() => setShowPaymentModal(true)}
+                    >
+                      <span>Payment:</span>
+                      {selectedPayment === 'Apple Pay' ? (
+                        <img 
+                          src={applePayLogo} 
+                          alt="Apple Pay" 
+                          className="w-8 h-5 object-contain"
+                        />
+                      ) : (
+                        <img 
+                          src={mastercardLogo} 
+                          alt="Mastercard" 
+                          className="w-8 h-5 object-contain"
+                        />
+                      )}
+                    </div>
                   </div>
+                  
+                  <Button
+                    onClick={handleRequestConfirm}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-semibold"
+                    disabled={createRequestMutation.isPending}
+                  >
+                    {createRequestMutation.isPending ? 'Requesting...' : 'Confirm Request'}
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-bold text-black text-lg">Standard Tow Service</h3>
+                      <p className="text-sm text-gray-600">15-20 min • ⭐ 4.2</p>
+                    </div>
+                    <p className="font-bold text-orange-500 text-xl">R{truckPricing[selectedStandardDriver] || 350}</p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-gray-800">Payment:</span>
+                      <span className="text-gray-600">{selectedPayment}</span>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="relative overflow-hidden h-full">
+              {/* Car Selection View */}
+              <div className={`absolute inset-0 transition-transform duration-500 ease-in-out ${
+                currentView === 'car' ? 'translate-y-0' : 'translate-y-full'
+              }`}>
+                <div className="px-6 pb-6 h-full flex flex-col">
+                  {showCarDetails && (
+                    <div className="flex items-center mb-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowCarDetails(false);
+                          setSelectedCar('current');
+                          setDragHeight(40);
+                        }}
+                        className="mr-2 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200"
+                      >
+                        ←
+                      </Button>
+                      <h3 className="font-bold text-black text-lg">Vehicle Information</h3>
+                    </div>
+                  )}
+                  
+                  {!showCarDetails && (
+                    <h3 className="font-bold text-black mb-4 text-lg">Vehicle Information</h3>
+                  )}
+                  
+                  {!showCarDetails && (
+                    <div className="space-y-4 mb-6">
+                      <div 
+                        className={`p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-all duration-300 ${
+                          selectedCar === 'current' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'
+                        }`}
+                        onClick={() => handleCarSelect('current')}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold">Use Current Vehicle</h3>
+                            <p className="text-sm text-gray-600">{currentCar.make} {currentCar.model} • {currentCar.licensePlate}</p>
+                          </div>
+                          <ChevronDown className="h-5 w-5 text-gray-400" />
+                        </div>
+                      </div>
+                      
+                      <div 
+                        className={`p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-all duration-300 ${
+                          selectedCar === 'different' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'
+                        }`}
+                        onClick={() => handleCarSelect('different')}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold">Use Different Vehicle</p>
+                            <p className="text-sm text-gray-600">Enter vehicle details</p>
+                          </div>
+                          <ChevronDown className="h-5 w-5 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {showCarDetails && selectedCar === 'current' && (
+                    <div className="animate-in fade-in duration-500">
+                      <div className="mb-6">
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <p className="font-semibold text-lg">{currentCar.make} {currentCar.model}</p>
+                          <p className="text-gray-600">{currentCar.year} • {currentCar.color} • {currentCar.licensePlate}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-6">
+                        <h3 className="font-medium mb-4">Vehicle Photos</h3>
+                        <p className="text-sm text-gray-600 mb-4">Take photos of your vehicle from all angles</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {['Front', 'Back', 'Left Side', 'Right Side'].map((side, index) => (
+                            <div 
+                              key={side} 
+                              className={`aspect-video rounded-lg flex items-center justify-center border-2 cursor-pointer transition-colors ${
+                                carPhotos[side] ? 'border-green-500 bg-green-50' : 'border-dashed border-gray-300 bg-gray-100 hover:bg-gray-200'
+                              }`}
+                              onClick={() => handlePhotoCapture(side)}
+                            >
+                              {carPhotos[side] ? (
+                                <img 
+                                  src={carPhotos[side]} 
+                                  alt={`${side} view`}
+                                  className="w-full h-full object-cover rounded-lg"
+                                />
+                              ) : (
+                                <div className="text-center">
+                                  <p className="text-xs text-gray-500">{side}</p>
+                                  <p className="text-xs text-gray-400">Tap to add photo</p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={handleCarConfirm}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-xl font-semibold text-lg mb-6 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        disabled={!isPhotosComplete()}
+                      >
+                        Continue
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {showCarDetails && selectedCar === 'different' && (
+                    <div className="animate-in fade-in duration-500">
+                      <div className="mb-6">
+                        <label className="text-sm font-medium text-gray-700 mb-2 block">Search your vehicle</label>
+                        <div className="relative">
+                          <Input 
+                            value={vehicleSearch}
+                            onChange={(e) => {
+                              setVehicleSearch(e.target.value);
+                              setShowSuggestions(true);
+                            }}
+                            placeholder="Type vehicle name (e.g. Corolla, Hilux, BMW)"
+                            className="w-full p-3 text-lg border-2 border-gray-200 rounded-xl"
+                          />
+                          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                          
+                          {showSuggestions && vehicleSearch && (
+                            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1">
+                              {fuzzySearch(vehicleSearch).map((vehicle, index) => (
+                                <div
+                                  key={index}
+                                  className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                  onClick={() => handleVehicleSelect(vehicle)}
+                                >
+                                  <p className="font-medium">{vehicle.name}</p>
+                                  <p className="text-sm text-gray-600">({vehicle.category})</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {selectedVehicle && (
+                        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <h4 className="font-medium mb-3">Auto-filled Details</h4>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <span className="text-gray-600">Category:</span>
+                              <p className="font-medium">{selectedVehicle.category}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Tow Class:</span>
+                              <p className="font-medium">{selectedVehicle.towClass}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Drive Type:</span>
+                              <p className="font-medium">{selectedVehicle.driveType}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Axle Count:</span>
+                              <p className="font-medium">{selectedVehicle.axleCount}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="mb-6">
+                        <label className="text-sm font-medium text-gray-700 mb-2 block">License Plate</label>
+                        <Input 
+                          value={licensePlate}
+                          onChange={(e) => setLicensePlate(e.target.value)}
+                          placeholder="Enter license plate"
+                          className="w-full p-3 text-lg border-2 border-gray-200 rounded-xl"
+                        />
+                      </div>
+                      
+                      <div className="mb-6">
+                        <h3 className="font-medium mb-4">Vehicle Photos</h3>
+                        <p className="text-sm text-gray-600 mb-4">Take photos of your vehicle from all angles</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {['Front', 'Back', 'Left Side', 'Right Side'].map((side, index) => (
+                            <div 
+                              key={side} 
+                              className={`aspect-video rounded-lg flex items-center justify-center border-2 cursor-pointer transition-colors ${
+                                carPhotos[side] ? 'border-green-500 bg-green-50' : 'border-dashed border-gray-300 bg-gray-100 hover:bg-gray-200'
+                              }`}
+                              onClick={() => handlePhotoCapture(side)}
+                            >
+                              {carPhotos[side] ? (
+                                <img 
+                                  src={carPhotos[side]} 
+                                  alt={`${side} view`}
+                                  className="w-full h-full object-cover rounded-lg"
+                                />
+                              ) : (
+                                <div className="text-center">
+                                  <p className="text-xs text-gray-500">{side}</p>
+                                  <p className="text-xs text-gray-400">Tap to add photo</p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={handleCarConfirm}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-xl font-semibold text-lg mb-6 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        disabled={!selectedVehicle || !licensePlate || !isPhotosComplete()}
+                      >
+                        Continue
+                      </Button>
+                    </div>
+                  )}
+                  
+                  
+
+                </div>
+              </div>
+              
+              {/* Location Selection View */}
+              <div className={`absolute inset-0 transition-transform duration-500 ease-in-out ${
+                currentView === 'location' ? 'translate-y-0' : 'translate-y-full'
+              }`}>
+                <div className="px-6 pb-6 h-full flex flex-col">
+                  <h3 className="font-bold text-black mb-4 text-lg">Where should the vehicle be taken?</h3>
+                  
+                  <div className="mb-4 relative">
+                    <Input
+                      ref={dropoffInputRef}
+                      placeholder="Enter destination"
+                      value={dropoffLocation}
+                      onChange={(e) => setDropoffLocation(e.target.value)}
+                      className="w-full p-4 pr-12 text-lg border-2 border-gray-200 rounded-xl"
+                    />
+                    <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  </div>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center mb-3">
+                      <History className="w-5 h-5 text-gray-600 mr-2" />
+                      <h4 className="font-semibold text-gray-700">Recent locations</h4>
+                    </div>
+                    <div className="space-y-2">
+                      {recentLocations.map((location, index) => (
+                        <div
+                          key={index}
+                          className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleLocationSelect(location)}
+                        >
+                          <p className="font-medium">{location}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Available Trucks View */}
+              <div className={`absolute inset-0 transition-transform duration-500 ease-in-out ${
+                currentView === 'trucks' ? 'translate-y-0' : currentView === 'location' ? 'translate-y-full' : '-translate-y-full'
+              }`}>
+                <div className="px-6 pb-6 h-full overflow-hidden flex flex-col">
+                  <div className="flex items-center mb-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleBackToLocation}
+                      className="mr-2 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200"
+                    >
+                      ←
+                    </Button>
+                    <h3 className="font-bold text-black text-lg">Available Tow Trucks</h3>
+                  </div>
+                  
+                  <div className="mb-4 space-y-2 flex-shrink-0 transition-all duration-300 ${
+                    isCardTransitioning ? 'blur-sm opacity-50' : ''
+                  }">
+                    <p className="text-sm text-gray-600">From: {pickupLocation}</p>
+                    {dropoffLocation && <p className="text-sm text-gray-600">To: {dropoffLocation}</p>}
+                  </div>
+                  
+                  <div className={`flex-1 flex flex-col min-h-0 transition-all duration-300 ${
+                    isCardTransitioning ? 'blur-sm opacity-50' : ''
+                  } pb-20`}>
+                    {driversLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                      </div>
+                    ) : nearbyDrivers?.length === 0 ? (
+                      <p className="text-gray-600 text-center py-8">No tow trucks available nearby</p>
+                    ) : (
+                      <div className="space-y-4 flex-1 overflow-y-auto pb-4 max-h-[50vh]">
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-2">Standard</h4>
+                          {standardDrivers.map((driver: MockDriver, index: number) => {
+                            const price = truckPricing[driver.id] || 350;
+                            const isSelected = selectedStandardDriver === driver.id;
+                            
+                            return (
+                              <div key={driver.id}>
+                                <Card 
+                                  className={`p-3 cursor-pointer hover:shadow-md ${isSelected ? 'border-2 border-orange-500 bg-white' : 'border border-gray-200 bg-white'}`} 
+                                  onClick={() => {
+                                    setSelectedStandardDriver(driver.id);
+                                    handleDriverSelect(driver);
+                                  }}
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <p className="font-semibold">{driver.name}</p>
+                                      <p className="text-sm text-gray-600">{driver.eta} • ⭐ {driver.rating}</p>
+                                    </div>
+                                    <p className="font-bold text-orange-500">R{price}</p>
+                                  </div>
+                                </Card>
+                                {index < standardDrivers.length - 1 && <div className="h-px bg-gray-300 my-2"></div>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-2">Premium</h4>
+                          {premiumDrivers.map((driver: MockDriver & { premiumProvider: string }) => {
+                            const price = truckPricing[driver.id] || 450;
+                            const brandColors = getBrandColors(driver.premiumProvider);
+                            
+                            return (
+                              <Card 
+                                key={driver.id} 
+                                className={`p-3 cursor-pointer hover:shadow-md mb-2 ${brandColors}`} 
+                                onClick={() => {
+                                  setSelectedPremiumProvider(driver.premiumProvider);
+                                  handleDriverSelect(driver);
+                                }}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <p className="font-semibold">{driver.name}</p>
+                                    <p className="text-sm opacity-90">{driver.eta} • ⭐ {driver.rating}</p>
+                                  </div>
+                                  <p className="font-bold">R{price}</p>
+                                </div>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Confirm Request View */}
+              <div className={`absolute inset-0 transition-transform duration-500 ease-in-out ${
+                currentView === 'confirm' ? 'translate-y-0' : 'translate-y-full'
+              }`}>
+                <div className="px-6 pb-6 h-full flex flex-col">
+                  <div className="flex items-center mb-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleBackToTrucks}
+                      className="mr-2 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200"
+                    >
+                      ←
+                    </Button>
+                    <h3 className="font-bold text-black text-lg">Confirm Request</h3>
+                  </div>
+                  
+                  {selectedDriver && (
+                    <div className="flex-1 flex flex-col">
+                      {/* Selected Driver Card - slides up from trucks view */}
+                      <div className="mb-4">
+                        {/* Add towing car image for standard services */}
+                        {selectedDriver.type !== 'premium' && (
+                          <div className="flex justify-center mb-4">
+                            <img 
+                              src="../../../attached_assets/towing-car.svg" 
+                              alt="Towing Car" 
+                              className="w-24 h-24 object-contain"
+                            />
+                          </div>
+                        )}
+                        
+                        <Card 
+                          className={`p-3 ${
+                            selectedDriver.type === 'premium' 
+                              ? getBrandColors(selectedPremiumProvider || '') 
+                              : 'border-2 border-orange-500 bg-white'
+                          }`}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="font-semibold">{selectedDriver.name}</p>
+                                <p className={`text-sm ${
+                                  selectedDriver.type === 'premium' ? 'opacity-90' : 'text-gray-600'
+                                }`}>{selectedDriver.eta} • ⭐ {selectedDriver.rating}</p>
+                              </div>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              <div className="flex justify-between">
+                                <span className={selectedDriver.type === 'premium' ? 'opacity-90' : 'text-gray-600'}>Distance</span>
+                                <span className="font-medium">2.5 km</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className={selectedDriver.type === 'premium' ? 'opacity-90' : 'text-gray-600'}>Booking Fee (%)</span>
+                                <span className="font-medium">15%</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className={selectedDriver.type === 'premium' ? 'opacity-90' : 'text-gray-600'}>Cancellation Fee</span>
+                                <span className="font-medium">R50</span>
+                              </div>
+                              <div className="border-t pt-1 flex justify-between">
+                                <span className={selectedDriver.type === 'premium' ? 'opacity-90' : 'text-gray-600'}>Payment:</span>
+                                <span className={`font-bold text-lg ${
+                                  selectedDriver.type === 'premium' ? '' : 'text-orange-500'
+                                }`}>R{truckPricing[selectedDriver.id] || 350}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      </div>
+                      
+                      {/* Service Benefits - fade in after card animation */}
+                      <div className="mb-6 animate-in fade-in duration-500 delay-1000">
+                        {selectedDriver.type === 'premium' ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <p className="text-sm text-gray-700">Ideal for insurance claims</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <p className="text-sm text-gray-700">Faster response</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <p className="text-sm text-gray-700">Top-rated drivers</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <p className="text-sm text-gray-700">Nearest available driver</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <p className="text-sm text-gray-700">Cheaper</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <p className="text-sm text-gray-700">Rating after trip</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Trip Details - fade in after card animation */}
+                      <div className="space-y-2 mb-6 animate-in fade-in duration-500 delay-1000">
+                        <p className="text-sm text-gray-600">From: {pickupLocation}</p>
+                        <p className="text-sm text-gray-600">To: {dropoffLocation}</p>
+                        <div 
+                          className="flex items-center space-x-2 text-sm text-blue-600 cursor-pointer hover:underline"
+                          onClick={() => setShowPaymentModal(true)}
+                        >
+                          <span>Payment:</span>
+                          {selectedPayment === 'Apple Pay' ? (
+                            <img 
+                              src={applePayLogo} 
+                              alt="Apple Pay" 
+                              className="w-8 h-5 object-contain"
+                            />
+                          ) : (
+                            <img 
+                              src={mastercardLogo} 
+                              alt="Mastercard" 
+                              className="w-8 h-5 object-contain"
+                            />
+                          )}
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={handleRequestConfirm}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-xl font-semibold text-lg mb-6 animate-in fade-in duration-500 delay-1000"
+                        disabled={createRequestMutation.isPending}
+                      >
+                        {createRequestMutation.isPending ? 'Requesting...' : 'Confirm Request'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      )}
+
+      {/* Request Modal - Remove this since we're using inline confirm view */}
+      
+      {/* Remove the Driver Search Overlay - now integrated in bottom component */}
+      
+      {/* Driver Found Bottom Sheet */}
+      {driverFound && assignedDriver && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 p-6">
+          <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
+          
+          <div className="flex items-center mb-4">
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mr-4">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-black">
+                Your driver is on the way!
+              </h2>
+              <p className="text-gray-600">ETA: 8-12 minutes</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4 bg-gray-50 p-4 rounded-lg">
+            <img 
+              src="/shared/assets/yellow-tow-truck-icon.png" 
+              alt="Tow truck" 
+              className="w-12 h-12"
+            />
+            <div className="flex-1">
+              <p className="font-semibold text-black">{assignedDriver.name}</p>
+              <p className="text-sm text-gray-600">{assignedDriver.vehicleType} • {assignedDriver.licensePlate}</p>
+              <p className="text-sm text-gray-600">⭐ {assignedDriver.rating}/5</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Camera Modal */}
+      {showCameraModal && (
+        <div className="fixed inset-0 bg-black z-[100] flex flex-col">
+          <div className="flex-1 relative flex items-center justify-center">
+            <div className="absolute top-4 left-4 right-4 z-10">
+              <div className="bg-black bg-opacity-50 text-white p-3 rounded-lg text-center">
+                <p className="font-semibold">Add {currentPhotoSide} Photo</p>
+                <p className="text-sm opacity-90">Choose how to add your {currentPhotoSide.toLowerCase()} photo</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-col space-y-4 px-8">
+              <Button
+                onClick={selectFromGallery}
+                disabled={isUploadingPhoto}
+                className="w-full h-16 bg-white hover:bg-gray-100 text-black flex items-center justify-center space-x-3 rounded-xl"
+              >
+                {isUploadingPhoto ? (
+                  <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="font-semibold">Choose from Gallery</span>
+                  </>
                 )}
-              </CardContent>
-            </Card>
+              </Button>
+              
+              <Button
+                onClick={takePicture}
+                disabled={isUploadingPhoto}
+                className="w-full h-16 bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center space-x-3 rounded-xl"
+              >
+                {isUploadingPhoto ? (
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="font-semibold">Take Photo</span>
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-center">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowCameraModal(false);
+                  setIsUploadingPhoto(false);
+                }}
+                className="bg-black bg-opacity-50 text-white hover:bg-opacity-70 px-8"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Payment Method Card - Only show during trucks view */}
+      {currentView === 'trucks' && !isMinimized && (
+        <div className="fixed bottom-0 left-0 right-0 z-[60] p-4">
+          <Card 
+            className="bg-orange-500 border-orange-500 cursor-pointer hover:bg-orange-600 transition-colors shadow-lg"
+            onClick={() => setShowPaymentModal(true)}
+          >
+            <CardContent className="p-4">
+              <div className="mb-2">
+                <p className="text-white text-sm opacity-90">Paying with</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  {selectedPayment === 'Apple Pay' ? (
+                    <img 
+                      src={applePayLogo} 
+                      alt="Apple Pay" 
+                      className="w-10 h-6 object-contain"
+                    />
+                  ) : (
+                    <img 
+                      src={mastercardLogo} 
+                      alt="Mastercard" 
+                      className="w-10 h-6 object-contain"
+                    />
+                  )}
+                  <span className="font-semibold text-white">{selectedPayment}</span>
+                </div>
+                <ChevronDown className="w-5 h-5 text-white" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      {/* Payment Method Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
+          <div className="bg-white w-full h-[80vh] rounded-t-3xl p-6">
+            <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-6"></div>
+            <h2 className="text-2xl font-bold text-black mb-6">Payment Method</h2>
+            
+            <div className="space-y-4">
+              <div 
+                className={`p-4 border-2 rounded-lg cursor-pointer ${
+                  selectedPayment === 'Apple Pay' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'
+                }`}
+                onClick={() => setSelectedPayment('Apple Pay')}
+              >
+                <div className="flex items-center space-x-3">
+                  <img 
+                    src={applePayLogo} 
+                    alt="Apple Pay" 
+                    className="w-12 h-8 object-contain"
+                  />
+                  <span className="font-semibold">Apple Pay</span>
+                </div>
+              </div>
+              
+              <div 
+                className={`p-4 border-2 rounded-lg cursor-pointer ${
+                  selectedPayment === 'Card Payment' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'
+                }`}
+                onClick={() => setSelectedPayment('Card Payment')}
+              >
+                <div className="flex items-center space-x-3">
+                  <img 
+                    src={mastercardLogo} 
+                    alt="Mastercard" 
+                    className="w-12 h-8 object-contain"
+                  />
+                  <span className="font-semibold">Card Payment</span>
+                </div>
+              </div>
+            </div>
             
             <Button
-              onClick={() => nearbyDrivers?.[0] && handleDriverSelect(nearbyDrivers[0])}
-              disabled={!nearbyDrivers?.length || createRequestMutation.isPending}
-              className="w-full bg-towapp-orange hover:bg-orange-600 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg disabled:opacity-50"
+              onClick={() => setShowPaymentModal(false)}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg mt-8"
             >
-              {createRequestMutation.isPending ? "Sending Request..." : "Request Tow Truck"}
+              Confirm
             </Button>
           </div>
         </div>
-      </div>
-
-      {/* Request Modal */}
-      {showRequestModal && selectedDriver && (
-        <RequestModal
-          driver={selectedDriver}
-          onConfirm={handleRequestConfirm}
-          onCancel={() => setShowRequestModal(false)}
-          isLoading={createRequestMutation.isPending}
-        />
       )}
-    </div>
+    </>
   );
 }

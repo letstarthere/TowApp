@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
-import { ArrowLeft, Star, Settings, CreditCard, History, HelpCircle } from "lucide-react";
+import { ArrowLeft, Star, Settings, CreditCard, History, HelpCircle, Car } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -24,7 +24,7 @@ export default function UserProfile() {
   });
 
   const handleBack = () => {
-    setLocation("/");
+    setLocation("/user-map");
   };
 
   const handleLogout = () => {
@@ -111,6 +111,18 @@ export default function UserProfile() {
           </Card>
 
           <div className="space-y-3">
+            <Button
+              variant="outline"
+              className="w-full justify-between p-4 h-auto"
+              onClick={() => setLocation("/user-vehicles")}
+            >
+              <div className="flex items-center">
+                <Car className="w-5 h-5 mr-3 text-gray-600" />
+                <span>My Vehicles</span>
+              </div>
+              <ArrowLeft className="w-4 h-4 text-gray-400 rotate-180" />
+            </Button>
+
             <Button
               variant="outline"
               className="w-full justify-between p-4 h-auto"

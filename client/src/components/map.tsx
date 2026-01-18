@@ -9,6 +9,12 @@ interface MapProps {
   isDriver?: boolean;
   requests?: RequestWithDetails[];
   onDriverClick?: (driver: DriverWithUser) => void;
+  selectedDriver?: DriverWithUser | null;
+  isMinimized?: boolean;
+  destination?: string;
+  driverLocation?: { latitude: number; longitude: number };
+  showRoute?: boolean;
+  routePhase?: 'pickup' | 'delivery';
 }
 
 declare global {
@@ -24,12 +30,22 @@ export default function Map({
   userLocation, 
   isDriver = false, 
   requests = [],
-  onDriverClick 
+  onDriverClick,
+  selectedDriver,
+  isMinimized = false,
+  destination,
+  driverLocation,
+  showRoute = false,
+  routePhase = 'pickup'
 }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const [markers, setMarkers] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [currentDirections, setCurrentDirections] = useState<any>(null);
+  const [directionsRenderer, setDirectionsRenderer] = useState<any>(null);
+  const [destinationMarker, setDestinationMarker] = useState<any>(null);
+  const [distanceLabel, setDistanceLabel] = useState<any>(null);
 
   // Load Google Maps script
   useEffect(() => {
@@ -44,7 +60,7 @@ export default function Map({
         }
 
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${config.apiKey}&callback=initMap`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${config.apiKey}&libraries=places,geometry&callback=initMap`;
         script.async = true;
         script.defer = true;
         
@@ -84,8 +100,29 @@ export default function Map({
           "elementType": "labels",
           "stylers": [{ "visibility": "off" }]
         }
-      ]
+      ],
+      gestureHandling: 'greedy',
+      zoomControl: false,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+      disableDefaultUI: true,
+      clickableIcons: false,
+      keyboardShortcuts: false
     });
+
+    // Initialize DirectionsRenderer
+    const renderer = new window.google.maps.DirectionsRenderer({
+      suppressMarkers: true,
+      polylineOptions: {
+        strokeColor: '#f97316', // Orange color
+        strokeWeight: 6,
+        strokeOpacity: 0.9
+      },
+      preserveViewport: true
+    });
+    renderer.setMap(mapInstance);
+    setDirectionsRenderer(renderer);
 
     setMap(mapInstance);
   }, [isLoaded, center, userLocation]);
@@ -105,15 +142,32 @@ export default function Map({
         map: map,
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: isDriver ? '#ff7b29' : '#3b82f6',
+          scale: 12,
+          fillColor: '#f97316', // Orange color
           fillOpacity: 1,
           strokeColor: 'white',
-          strokeWeight: 2,
+          strokeWeight: 3,
         },
-        title: isDriver ? 'Your Location' : 'You are here'
+        title: 'Your location',
+        zIndex: 1000
       });
       newMarkers.push(userMarker);
+    }
+
+    // Add driver location marker when showing route
+    if (driverLocation && showRoute) {
+      const driverMarker = new window.google.maps.Marker({
+        position: { lat: driverLocation.latitude, lng: driverLocation.longitude },
+        map: map,
+        icon: {
+          url: '/attached_assets/yellow-tow-truck-icon.png',
+          scaledSize: new window.google.maps.Size(48, 48),
+          anchor: new window.google.maps.Point(24, 24)
+        },
+        title: 'Your Driver - John Smith',
+        zIndex: 1000
+      });
+      newMarkers.push(driverMarker);
     }
 
     // Add driver markers for users
@@ -129,14 +183,13 @@ export default function Map({
             position: position,
             map: map,
             icon: {
-              url: 'data:image/svg+xml;base64,' + btoa(`
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#ff7b29">
-                  <path d="M20 8h-3V4H3C1.89 4 1 4.89 1 6v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2V10l-3-2zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96.54L19 11.5V9.5l.5-1zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
-                </svg>
-              `),
+              url: '/shared/assets/yellow-tow-truck-icon.png',
               scaledSize: new window.google.maps.Size(32, 32),
+              anchor: new window.google.maps.Point(16, 16)
             },
-            title: `${driver.user.name} - ${driver.vehicleType}`
+            title: `${driver.user.name} - ${driver.vehicleType}`,
+            zIndex: 500,
+            optimized: false
           });
 
           driverMarker.addListener('click', () => {
@@ -178,12 +231,179 @@ export default function Map({
     setMarkers(newMarkers);
   }, [map, drivers, userLocation, isDriver, requests, onDriverClick]);
 
-  // Center map on user location when it changes
+  // Draw directions to destination (only once)
   useEffect(() => {
-    if (map && userLocation) {
-      map.setCenter({ lat: userLocation.latitude, lng: userLocation.longitude });
+    if (!map || !userLocation || !directionsRenderer || isDriver || !destination) return;
+    
+    // Clear existing markers if they exist
+    if (destinationMarker) {
+      destinationMarker.setMap(null);
     }
-  }, [map, userLocation]);
+    if (distanceLabel) {
+      distanceLabel.setMap(null);
+    }
+
+    const userPos = { lat: userLocation.latitude, lng: userLocation.longitude };
+    
+    // Geocode destination address
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ address: destination }, (results, status) => {
+      if (status === 'OK' && results?.[0]) {
+        const destinationPos = results[0].geometry.location;
+        
+        // Create destination marker
+        const destMarker = new window.google.maps.Marker({
+          position: destinationPos,
+          map: map,
+          icon: {
+            path: window.google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+            scale: 12,
+            fillColor: '#ef4444',
+            fillOpacity: 1,
+            strokeColor: 'white',
+            strokeWeight: 3,
+          },
+          title: 'Destination',
+          zIndex: 1000,
+          optimized: false
+        });
+        setDestinationMarker(destMarker);
+        
+        // Calculate distance
+        const distance = window.google.maps.geometry.spherical.computeDistanceBetween(
+          new window.google.maps.LatLng(userPos.lat, userPos.lng),
+          destinationPos
+        );
+        
+        const distanceText = distance >= 1000 
+          ? `${(distance / 1000).toFixed(1)} km`
+          : `${Math.round(distance)} m`;
+        
+        // Create distance label as marker
+        const labelMarker = new window.google.maps.Marker({
+          position: {
+            lat: destinationPos.lat() + 0.001,
+            lng: destinationPos.lng()
+          },
+          map: map,
+          icon: {
+            path: 'M 0,0 0,0',
+            strokeOpacity: 0,
+            fillOpacity: 0
+          },
+          label: {
+            text: distanceText,
+            color: '#ff7b29',
+            fontWeight: 'bold',
+            fontSize: '14px'
+          },
+          zIndex: 1001,
+          optimized: false
+        });
+        setDistanceLabel(labelMarker);
+        
+        // Create directions request
+        const directionsService = new window.google.maps.DirectionsService();
+        directionsService.route(
+          {
+            origin: userPos,
+            destination: destinationPos,
+            travelMode: window.google.maps.TravelMode.DRIVING,
+          },
+          (result, status) => {
+            if (status === 'OK' && result) {
+              directionsRenderer.setDirections(result);
+              setCurrentDirections(result);
+            }
+          }
+        );
+      }
+    });
+    
+  }, [map, userLocation, destination, directionsRenderer, isDriver, destinationMarker, distanceLabel]);
+
+  // Draw route based on phase (pickup or delivery)
+  useEffect(() => {
+    if (!map || !userLocation || !driverLocation || !showRoute || !directionsRenderer) return;
+    
+    // Update DirectionsRenderer options for orange route
+    directionsRenderer.setOptions({
+      suppressMarkers: true,
+      polylineOptions: {
+        strokeColor: '#f97316', // Orange color
+        strokeWeight: 6,
+        strokeOpacity: 0.9
+      }
+    });
+    
+    const directionsService = new window.google.maps.DirectionsService();
+    
+    let routeOrigin, routeDestination;
+    
+    if (routePhase === 'pickup') {
+      // Driver to user location
+      routeOrigin = { lat: driverLocation.latitude, lng: driverLocation.longitude };
+      routeDestination = { lat: userLocation.latitude, lng: userLocation.longitude };
+    } else {
+      // User location to final destination
+      if (!destination) return;
+      
+      // Geocode destination address
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ address: destination }, (results, status) => {
+        if (status === 'OK' && results?.[0]) {
+          const destinationPos = results[0].geometry.location;
+          
+          directionsService.route(
+            {
+              origin: { lat: userLocation.latitude, lng: userLocation.longitude },
+              destination: destinationPos,
+              travelMode: window.google.maps.TravelMode.DRIVING,
+            },
+            (result, status) => {
+              if (status === 'OK' && result) {
+                directionsRenderer.setDirections(result);
+                const bounds = new window.google.maps.LatLngBounds();
+                bounds.extend({ lat: userLocation.latitude, lng: userLocation.longitude });
+                bounds.extend(destinationPos);
+                map.fitBounds(bounds, { padding: 50 });
+              }
+            }
+          );
+        }
+      });
+      return;
+    }
+    
+    directionsService.route(
+      {
+        origin: routeOrigin,
+        destination: routeDestination,
+        travelMode: window.google.maps.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        if (status === 'OK' && result) {
+          directionsRenderer.setDirections(result);
+          // Only fit bounds on first load, not on updates
+          if (!map.getBounds()) {
+            const bounds = new window.google.maps.LatLngBounds();
+            bounds.extend(routeOrigin);
+            bounds.extend(routeDestination);
+            map.fitBounds(bounds, { padding: 50 });
+          }
+        }
+      }
+    );
+  }, [map, userLocation, driverLocation, showRoute, directionsRenderer, routePhase, destination]);
+
+  // Handle map resize when bottom sheet changes (without re-fitting bounds)
+  useEffect(() => {
+    if (map) {
+      setTimeout(() => {
+        window.google.maps.event.trigger(map, 'resize');
+      }, 300);
+    }
+  }, [isMinimized, map]);
 
   if (!isLoaded) {
     return (
@@ -197,7 +417,15 @@ export default function Map({
   }
 
   return (
-    <div ref={mapRef} className="w-full h-full relative bg-gray-200">
+    <div 
+      ref={mapRef} 
+      data-map
+      className="w-full h-full relative bg-gray-200" 
+      style={{ 
+        pointerEvents: 'auto',
+        zIndex: 1
+      }}
+    >
       {/* Fallback for when Google Maps fails to load */}
       <div className="absolute inset-0 flex items-center justify-center bg-gray-100" style={{ zIndex: -1 }}>
         <p className="text-gray-600">Map loading...</p>

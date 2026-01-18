@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
-import { ArrowLeft, MapPin, Clock, Star, Download } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Star, Download, FileText } from "lucide-react";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function TripHistory() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [trips] = useState([
     {
       id: 1,
@@ -17,7 +19,8 @@ export default function TripHistory() {
       vehicleType: "Flatbed Truck",
       price: 450,
       status: "completed",
-      rating: 5
+      rating: 5,
+      invoiceNumber: "INV-2024-000001"
     },
     {
       id: 2,
@@ -29,7 +32,8 @@ export default function TripHistory() {
       vehicleType: "Tow Truck",
       price: 320,
       status: "completed",
-      rating: 4
+      rating: 4,
+      invoiceNumber: "INV-2024-000002"
     },
     {
       id: 3,
@@ -41,7 +45,8 @@ export default function TripHistory() {
       vehicleType: "Heavy Duty Truck",
       price: 680,
       status: "completed",
-      rating: 5
+      rating: 5,
+      invoiceNumber: "INV-2024-000003"
     },
     {
       id: 4,
@@ -59,6 +64,37 @@ export default function TripHistory() {
 
   const handleBack = () => {
     setLocation("/profile");
+  };
+
+  const handleDownloadInvoice = async (trip: any) => {
+    try {
+      const response = await fetch(`/api/test/download-invoice/${trip.invoiceNumber}`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${trip.invoiceNumber}.pdf`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Download Started",
+          description: "Invoice PDF download has started",
+        });
+      } else {
+        throw new Error('Invoice not found');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download invoice",
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -98,13 +134,7 @@ export default function TripHistory() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </Button>
         <h1 className="text-xl font-semibold text-towapp-black">Trip History</h1>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
-        >
-          <Download className="w-5 h-5 text-gray-600" />
-        </Button>
+        <div className="w-10"></div>
       </div>
 
       <div className="flex-1 p-6">
@@ -149,11 +179,24 @@ export default function TripHistory() {
                     <p className="text-sm text-gray-600">{trip.vehicleType}</p>
                   </div>
                   
-                  {trip.status === 'completed' && (
-                    <div className="flex items-center space-x-1">
-                      {renderStars(trip.rating)}
-                    </div>
-                  )}
+                  <div className="flex items-center space-x-2">
+                    {trip.status === 'completed' && (
+                      <>
+                        <div className="flex items-center space-x-1">
+                          {renderStars(trip.rating)}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadInvoice(trip)}
+                          className="ml-2"
+                        >
+                          <FileText className="w-4 h-4 mr-1" />
+                          Invoice
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
