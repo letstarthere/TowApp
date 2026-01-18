@@ -50,6 +50,11 @@ export default function Map({
   // Load Google Maps script
   useEffect(() => {
     const loadGoogleMaps = async () => {
+      if (window.google?.maps) {
+        setIsLoaded(true);
+        return;
+      }
+      
       try {
         const response = await fetch('/api/config/maps');
         const config = await response.json();
@@ -63,6 +68,9 @@ export default function Map({
         script.src = `https://maps.googleapis.com/maps/api/js?key=${config.apiKey}&libraries=places,geometry&callback=initMap`;
         script.async = true;
         script.defer = true;
+        script.onerror = () => {
+          console.error('Failed to load Google Maps script');
+        };
         
         window.initMap = () => {
           setIsLoaded(true);

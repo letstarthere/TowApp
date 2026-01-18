@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
-import { User, History, Navigation, Star, Truck, ChevronDown, CreditCard, Search, X } from "lucide-react";
+import { User, History, Navigation, Star, Truck, ChevronDown, CreditCard, Search, X, Home, MapPin } from "lucide-react";
 import applePayLogo from "@assets/Apple_Pay-Logo.wine.svg";
 import mastercardLogo from "../../../attached_assets/mastercard.jpg";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -63,7 +63,7 @@ export default function UserMap() {
   const [selectedPayment, setSelectedPayment] = useState('Apple Pay');
   const [selectedPremiumProvider, setSelectedPremiumProvider] = useState<string | null>(null);
   const [truckPricing, setTruckPricing] = useState<Record<number, number>>({});
-  const [dragHeight, setDragHeight] = useState(40); // Height as percentage
+  const [dragHeight, setDragHeight] = useState(50); // Height as percentage
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
   const [startHeight, setStartHeight] = useState(40);
@@ -907,68 +907,34 @@ export default function UserMap() {
           <div className={`absolute top-0 left-0 right-0 flex items-center p-4 z-10 transition-opacity duration-300 ${
             currentView === 'car' && showCarDetails && selectedCar === 'different' ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}>
-            {/* Profile/Address Pill */}
-            <div className={`transition-all duration-500 ease-in-out bg-white shadow-lg flex items-center cursor-pointer ${
-              (currentView === 'location' || currentView === 'car') || !dropoffLocation
-                ? 'w-10 h-10 rounded-full' 
-                : 'w-full max-w-sm h-12 rounded-full px-4'
-            }`} onClick={handleProfileClick}>
-              {(currentView === 'location' || currentView === 'car') || !dropoffLocation ? (
-                <div className="w-full h-full flex items-center justify-center">
-                  <User className="w-5 h-5 text-gray-600" />
-                </div>
-              ) : (
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center space-x-2 flex-1 min-w-0 ml-2">
-                    <span className="text-sm font-medium text-gray-800 truncate">{dropoffLocation}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleBackToLocation}
-                    className="w-6 h-6 p-0 rounded-full hover:bg-gray-100 flex-shrink-0 ml-2"
-                  >
-                    <X className="w-4 h-4 text-gray-600" />
-                  </Button>
-                </div>
-              )}
-            </div>
-            
-            {/* History Icon - only show in location view */}
-            {(currentView === 'location' || currentView === 'car') && (
-              <div className="ml-auto">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setLocation('/trip-history')}
-                  className="w-10 h-10 rounded-full bg-white shadow-lg hover:bg-gray-50"
-                >
-                  <History className="w-5 h-5 text-gray-600" />
-                </Button>
+            {/* Menu Icon */}
+            <div className="transition-all duration-500 ease-in-out bg-white shadow-lg flex items-center cursor-pointer w-10 h-10 rounded-full" onClick={handleProfileClick}>
+              <div className="w-full h-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
               </div>
-            )}
+            </div>
           </div>
           
-          {/* Location Button - only show in location view */}
-          {currentView === 'location' && (
-            <div className="absolute top-20 right-4 z-10">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-12 h-12 bg-white rounded-full shadow-lg hover:bg-gray-50"
-                onClick={() => {
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 100);
-                }}
-              >
-                <Navigation className="w-5 h-5 text-gray-600" />
-              </Button>
-            </div>
-          )}
+          {/* Location Button */}
+          <div className="absolute bottom-[calc(50vh+2rem)] right-4 z-10">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-12 h-12 bg-orange-500 rounded-full shadow-lg hover:bg-orange-600"
+              onClick={() => {
+                if (location) {
+                  // Map will re-center to user location
+                  window.location.reload();
+                }
+              }}
+            >
+              <Navigation className="w-5 h-5 text-white" />
+            </Button>
+          </div>
         </div>
         
-        {/* Bottom Sheet */}
         {/* Bottom Sheet */}
         <div 
           className={`fixed left-0 right-0 shadow-2xl transition-all duration-500 ease-out z-50 overflow-hidden ${
@@ -983,8 +949,8 @@ export default function UserMap() {
             borderTopRightRadius: '1.5rem'
           }}
         >
-          {/* Drag Handle */}
-          {!isSearching && !towingInProgress && (
+          {/* Drag Handle - only show when not on initial car view */}
+          {!isSearching && !towingInProgress && currentView !== 'car' && (
             <div 
               className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-4 cursor-grab active:cursor-grabbing hover:bg-gray-400 transition-colors"
               onMouseDown={handleDragStart}
@@ -1196,7 +1162,7 @@ export default function UserMap() {
                   )}
                   
                   {!showCarDetails && (
-                    <h3 className="font-bold text-black mb-4 text-lg">Vehicle Information</h3>
+                    <h3 className="font-bold text-black mb-4 text-lg">Hey there, need help?</h3>
                   )}
                   
                   {!showCarDetails && (
@@ -1209,7 +1175,7 @@ export default function UserMap() {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold">Use Current Vehicle</h3>
+                            <h3 className="font-semibold">Tow Your Car</h3>
                             <p className="text-sm text-gray-600">{currentCar.make} {currentCar.model} • {currentCar.licensePlate}</p>
                           </div>
                           <ChevronDown className="h-5 w-5 text-gray-400" />
@@ -1224,8 +1190,27 @@ export default function UserMap() {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-semibold">Use Different Vehicle</p>
+                            <p className="font-semibold">Tow Another Car</p>
                             <p className="text-sm text-gray-600">Enter vehicle details</p>
+                          </div>
+                          <ChevronDown className="h-5 w-5 text-gray-400" />
+                        </div>
+                      </div>
+                      
+                      <div 
+                        className="p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-all duration-300"
+                        onClick={() => {
+                          // TODO: Implement schedule tow
+                          toast({
+                            title: "Coming Soon",
+                            description: "Schedule a tow feature will be available soon",
+                          });
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold">Schedule a Tow</p>
+                            <p className="text-sm text-gray-600">Book for later</p>
                           </div>
                           <ChevronDown className="h-5 w-5 text-gray-400" />
                         </div>
@@ -1860,6 +1845,41 @@ export default function UserMap() {
             >
               Confirm
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Navigation Bar */}
+      {!isSearching && !driverAccepted && !towingInProgress && !drivingToDestination && !destinationArrived && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-[70] safe-area-bottom">
+          <div className="flex items-center justify-around py-3 px-6">
+            <button
+              onClick={() => {
+                setCurrentView('car');
+                setShowCarDetails(false);
+                setDragHeight(50);
+              }}
+              className="flex flex-col items-center space-y-1"
+            >
+              <Home className={`w-6 h-6 ${currentView === 'car' && !showCarDetails ? 'text-orange-500' : 'text-gray-400'}`} />
+              <span className={`text-xs ${currentView === 'car' && !showCarDetails ? 'text-orange-500 font-semibold' : 'text-gray-600'}`}>Home</span>
+            </button>
+            
+            <button
+              onClick={() => setLocation('/trip-history')}
+              className="flex flex-col items-center space-y-1"
+            >
+              <History className="w-6 h-6 text-gray-400" />
+              <span className="text-xs text-gray-600">Trips</span>
+            </button>
+            
+            <button
+              onClick={handleProfileClick}
+              className="flex flex-col items-center space-y-1"
+            >
+              <User className="w-6 h-6 text-gray-400" />
+              <span className="text-xs text-gray-600">Profile</span>
+            </button>
           </div>
         </div>
       )}

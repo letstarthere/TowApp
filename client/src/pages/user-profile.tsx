@@ -15,6 +15,9 @@ export default function UserProfile() {
   const logoutMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/auth/logout"),
     onSuccess: () => {
+      // Clear all localStorage
+      localStorage.clear();
+      
       toast({
         title: "Logged Out",
         description: "You have been logged out successfully",
