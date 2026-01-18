@@ -29,9 +29,7 @@ export default function UserAuth() {
     onSuccess: async (data) => {
       // Save user to localStorage for persistence
       const response = await data.json();
-      if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
-      }
+      localStorage.setItem('user', JSON.stringify(response));
       
       // Invalidate auth cache to trigger user data refetch
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });

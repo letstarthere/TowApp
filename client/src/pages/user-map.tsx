@@ -508,12 +508,12 @@ export default function UserMap() {
       }
       
       const image = await Camera.getPhoto({
-        quality: 60,
+        quality: 40,
         allowEditing: false,
         resultType: CameraResultType.DataUrl,
         source: CameraSource.Camera,
-        width: 800,
-        height: 600
+        width: 640,
+        height: 480
       });
       
       if (image.dataUrl) {
@@ -538,10 +538,8 @@ export default function UserMap() {
     try {
       setIsUploadingPhoto(true);
       
-      // Use Capacitor Camera plugin for gallery access
       const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
       
-      // Request photos permission first
       const permissions = await Camera.requestPermissions({ permissions: ['photos'] });
       if (permissions.photos !== 'granted') {
         toast({
@@ -554,26 +552,33 @@ export default function UserMap() {
         return;
       }
       
-      const image = await Camera.getPhoto({
-        quality: 60,
-        allowEditing: false,
-        resultType: CameraResultType.DataUrl,
-        source: CameraSource.Photos,
-        width: 800,
-        height: 600
-      });
+      const image = await Promise.race([
+        Camera.getPhoto({
+          quality: 40,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Photos,
+          width: 640,
+          height: 480
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Gallery selection timeout')), 30000)
+        )
+      ]) as any;
       
-      if (image.dataUrl) {
+      if (image?.dataUrl) {
         setCarPhotos(prev => ({ ...prev, [currentPhotoSide]: image.dataUrl! }));
       }
       
       setShowCameraModal(false);
       setIsUploadingPhoto(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Gallery error:', error);
       toast({
         title: "Gallery Error",
-        description: "Unable to access photo gallery. Please check permissions.",
+        description: error.message === 'Gallery selection timeout' 
+          ? "Selection took too long. Please try again." 
+          : "Unable to access photo gallery. Please check permissions.",
         variant: "destructive"
       });
       setShowCameraModal(false);

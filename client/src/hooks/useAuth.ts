@@ -6,16 +6,22 @@ import { USE_MOCK_DATA } from "@/lib/config";
 export function useAuth() {
   const { data: user, isLoading } = useQuery<UserWithDriver>({
     queryKey: ["/api/auth/me"],
-    queryFn: USE_MOCK_DATA ? async () => {
-      // Check localStorage for saved user
+    queryFn: async () => {
+      // Always check localStorage first
       const savedUser = localStorage.getItem('user');
       if (savedUser) {
         return JSON.parse(savedUser);
       }
+      
+      // If not in localStorage and not using mock data, try API
+      if (!USE_MOCK_DATA) {
+        return getQueryFn({ on401: "returnNull" })();
+      }
+      
       return null;
-    } : getQueryFn({ on401: "returnNull" }),
+    },
     retry: false,
-    staleTime: Infinity, // Keep user data indefinitely
+    staleTime: Infinity,
   });
 
   return {
