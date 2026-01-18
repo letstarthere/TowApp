@@ -79,30 +79,11 @@ function Router() {
         <Route path="/photo-capture" component={PhotoCapture} />
         <Route path="/user-map" component={UserMap} />
         <Route path="/driver-map" component={DriverMap} />
-        
-        {user && (
-          <>
-            {user.userType === 'user' ? (
-              <>
-                <Route path="/profile" component={UserProfile} />
-                <Route path="/user-profile" component={UserProfile} />
-                <Route path="/payment-methods" component={PaymentMethods} />
-                <Route path="/trip-history" component={TripHistory} />
-              </>
-            ) : (
-              <>
-                <Route path="/profile" component={DriverProfile} />
-                <Route path="/driver/earnings" component={DriverEarnings} />
-                <Route path="/driver/job-history" component={JobHistory} />
-                <Route path="/driver/campaigns" component={ActiveCampaigns} />
-                <Route path="/driver/scheduled-jobs" component={ScheduledJobs} />
-                <Route path="/driver/support" component={DriverSupport} />
-                <Route path="/driver/invite-drivers" component={InviteDrivers} />
-                <Route path="/driver/settings" component={DriverSettings} />
-              </>
-            )}
-          </>
-        )}
+        <Route path="/user-profile" component={UserProfile} />
+        <Route path="/profile" component={UserProfile} />
+        <Route path="/payment-methods" component={PaymentMethods} />
+        <Route path="/trip-history" component={TripHistory} />
+        <Route path="/user-vehicles" component={UserVehicles} />
         
         <Route component={NotFound} />
       </Switch>
