@@ -21,6 +21,7 @@ import DrivingToDestination from "@/components/driving-to-destination";
 import DestinationArrived from "@/components/destination-arrived";
 import RoadAssistanceConcluded from "@/components/road-assistance-concluded";
 import TowTruckCard from "@/components/tow-truck-card";
+import { pushNotificationManager } from "@/lib/pushNotifications";
 import type { DriverWithUser, MockDriver } from "@/lib/types";
 
 export default function UserMap() {
@@ -493,6 +494,19 @@ export default function UserMap() {
       // Use Capacitor Camera plugin for better mobile support
       const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
       
+      // Request camera permission first
+      const permissions = await Camera.requestPermissions({ permissions: ['camera'] });
+      if (permissions.camera !== 'granted') {
+        toast({
+          title: "Permission Denied",
+          description: "Camera permission is required to take photos.",
+          variant: "destructive"
+        });
+        setShowCameraModal(false);
+        setIsUploadingPhoto(false);
+        return;
+      }
+      
       const image = await Camera.getPhoto({
         quality: 90,
         allowEditing: false,
@@ -502,10 +516,6 @@ export default function UserMap() {
       
       if (image.dataUrl) {
         setCarPhotos(prev => ({ ...prev, [currentPhotoSide]: image.dataUrl! }));
-        toast({
-          title: "Photo captured",
-          description: `${currentPhotoSide} photo captured successfully`
-        });
       }
       
       setShowCameraModal(false);
@@ -529,6 +539,19 @@ export default function UserMap() {
       // Use Capacitor Camera plugin for gallery access
       const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
       
+      // Request photos permission first
+      const permissions = await Camera.requestPermissions({ permissions: ['photos'] });
+      if (permissions.photos !== 'granted') {
+        toast({
+          title: "Permission Denied",
+          description: "Photo library permission is required.",
+          variant: "destructive"
+        });
+        setShowCameraModal(false);
+        setIsUploadingPhoto(false);
+        return;
+      }
+      
       const image = await Camera.getPhoto({
         quality: 90,
         allowEditing: false,
@@ -538,10 +561,6 @@ export default function UserMap() {
       
       if (image.dataUrl) {
         setCarPhotos(prev => ({ ...prev, [currentPhotoSide]: image.dataUrl! }));
-        toast({
-          title: "Photo selected",
-          description: `${currentPhotoSide} photo selected from gallery`
-        });
       }
       
       setShowCameraModal(false);
@@ -627,6 +646,9 @@ export default function UserMap() {
   const handleRequestConfirm = async () => {
     if (!location || !selectedDriver) return;
 
+    // Play success sound
+    pushNotificationManager.playNotificationSound();
+
     // Clear dropoff location to trigger pill transition
     setDropoffLocation('');
     
@@ -657,10 +679,24 @@ export default function UserMap() {
         setDriverFound(false);
         setRoutePhase('pickup');
         
+        // Show notification that driver is on the way
+        pushNotificationManager.showLocalNotification({
+          title: 'Driver On The Way',
+          body: `${driver.name} is heading to your location. ETA: 8-12 min`,
+          icon: '/assets/blackapplogo.png'
+        });
+        
         // Simulate driver arrival after 10 seconds
         setTimeout(() => {
           setDriverArrived(true);
           setRoutePhase('delivery');
+          
+          // Show notification that driver has arrived
+          pushNotificationManager.showLocalNotification({
+            title: 'Driver Arrived',
+            body: `${driver.name} has arrived at your location`,
+            icon: '/assets/blackapplogo.png'
+          });
           
           // Start towing process after 10 more seconds
           setTimeout(() => {
@@ -810,11 +846,11 @@ export default function UserMap() {
             currentView === 'car' && showCarDetails && selectedCar === 'different' ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}>
             {/* Profile/Address Pill */}
-            <div className={`transition-all duration-500 ease-in-out bg-white shadow-lg flex items-center ${
+            <div className={`transition-all duration-500 ease-in-out bg-white shadow-lg flex items-center cursor-pointer ${
               (currentView === 'location' || currentView === 'car') || !dropoffLocation
                 ? 'w-10 h-10 rounded-full' 
                 : 'w-full max-w-sm h-12 rounded-full px-4'
-            }`}>
+            }`} onClick={handleProfileClick}>
               {(currentView === 'location' || currentView === 'car') || !dropoffLocation ? (
                 <div className="w-full h-full flex items-center justify-center">
                   <User className="w-5 h-5 text-gray-600" />
@@ -886,7 +922,7 @@ export default function UserMap() {
           }}
         >
           {/* Drag Handle */}
-          {!isSearching && (
+          {!isSearching && !towingInProgress && (
             <div 
               className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-4 cursor-grab active:cursor-grabbing hover:bg-gray-400 transition-colors"
               onMouseDown={handleDragStart}
@@ -905,13 +941,15 @@ export default function UserMap() {
               }}
             />
           ) : towingInProgress ? (
-            <TowingInProgress
-              onComplete={() => {
-                setTowingInProgress(false);
-                setDrivingToDestination(true);
-                setDragHeight(40);
-              }}
-            />
+            <div style={{ height: '50vh', pointerEvents: 'none' }}>
+              <TowingInProgress
+                onComplete={() => {
+                  setTowingInProgress(false);
+                  setDrivingToDestination(true);
+                  setDragHeight(40);
+                }}
+              />
+            </div>
           ) : drivingToDestination ? (
             <DrivingToDestination
               driver={assignedDriver}
@@ -1451,9 +1489,12 @@ export default function UserMap() {
                         {selectedDriver.type !== 'premium' && (
                           <div className="flex justify-center mb-4">
                             <img 
-                              src="../../../attached_assets/towing-car.svg" 
+                              src="/assets/towing-car.svg" 
                               alt="Towing Car" 
                               className="w-24 h-24 object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
                             />
                           </div>
                         )}

@@ -1,13 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import type { UserWithDriver } from "@/lib/types";
+import { USE_MOCK_DATA } from "@/lib/config";
 
 export function useAuth() {
   const { data: user, isLoading } = useQuery<UserWithDriver>({
     queryKey: ["/api/auth/me"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: USE_MOCK_DATA ? async () => {
+      // Check localStorage for saved user
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        return JSON.parse(savedUser);
+      }
+      return null;
+    } : getQueryFn({ on401: "returnNull" }),
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: Infinity, // Keep user data indefinitely
   });
 
   return {

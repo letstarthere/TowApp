@@ -80,12 +80,22 @@ class PushNotificationManager {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(payload.title, {
         body: payload.body,
-        icon: payload.icon || '/icon-192x192.png',
-        badge: payload.badge || '/badge-72x72.png',
+        icon: payload.icon || '/assets/blackapplogo.png',
+        badge: payload.badge || '/assets/blackapplogo.png',
         tag: payload.tag,
         data: payload.data,
         requireInteraction: true
       });
+    }
+  }
+
+  // Play notification sound
+  playNotificationSound(soundFile: string = '/assets/TowApp_Success_Notification_Sound.mp3'): void {
+    try {
+      const audio = new Audio(soundFile);
+      audio.play().catch(err => console.error('Sound play failed:', err));
+    } catch (error) {
+      console.error('Sound error:', error);
     }
   }
 
