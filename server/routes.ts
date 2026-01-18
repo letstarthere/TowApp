@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get Google Maps API key for frontend
   app.get('/api/config/maps', (req: Request, res: Response) => {
     res.json({
-      apiKey: 'AIzaSyCqTx42ou99v4zshnHEp7rhlXMl8d6vmGM'
+      apiKey: 'AIzaSyAgl6sJeKZ83uP9iD8kv5WXqka629pZ2bA'
     });
   });
 

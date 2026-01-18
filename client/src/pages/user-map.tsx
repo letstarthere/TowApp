@@ -508,10 +508,12 @@ export default function UserMap() {
       }
       
       const image = await Camera.getPhoto({
-        quality: 90,
+        quality: 60,
         allowEditing: false,
         resultType: CameraResultType.DataUrl,
         source: CameraSource.Camera,
+        width: 800,
+        height: 600
       });
       
       if (image.dataUrl) {
@@ -553,10 +555,12 @@ export default function UserMap() {
       }
       
       const image = await Camera.getPhoto({
-        quality: 90,
+        quality: 60,
         allowEditing: false,
         resultType: CameraResultType.DataUrl,
         source: CameraSource.Photos,
+        width: 800,
+        height: 600
       });
       
       if (image.dataUrl) {
@@ -765,7 +769,7 @@ export default function UserMap() {
   };
 
   const handleProfileClick = () => {
-    setLocation("/profile");
+    setLocation("/user-profile");
   };
 
   if (locationError) {
