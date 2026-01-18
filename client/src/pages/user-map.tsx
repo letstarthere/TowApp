@@ -63,7 +63,7 @@ export default function UserMap() {
   const [selectedPayment, setSelectedPayment] = useState('Apple Pay');
   const [selectedPremiumProvider, setSelectedPremiumProvider] = useState<string | null>(null);
   const [truckPricing, setTruckPricing] = useState<Record<number, number>>({});
-  const [dragHeight, setDragHeight] = useState(50); // Height as percentage
+  const [dragHeight, setDragHeight] = useState(70); // Height as percentage
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
   const [startHeight, setStartHeight] = useState(40);
@@ -829,6 +829,10 @@ export default function UserMap() {
   const handleProfileClick = () => {
     setLocation("/user-profile");
   };
+  
+  const handleMenuClick = () => {
+    setLocation("/user-profile");
+  };
 
   if (locationError) {
     return (
@@ -908,7 +912,7 @@ export default function UserMap() {
             currentView === 'car' && showCarDetails && selectedCar === 'different' ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}>
             {/* Menu Icon */}
-            <div className="transition-all duration-500 ease-in-out bg-white shadow-lg flex items-center cursor-pointer w-10 h-10 rounded-full" onClick={handleProfileClick}>
+            <div className="transition-all duration-500 ease-in-out bg-white shadow-lg flex items-center cursor-pointer w-10 h-10 rounded-full" onClick={handleMenuClick}>
               <div className="w-full h-full flex items-center justify-center">
                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -1143,27 +1147,25 @@ export default function UserMap() {
                 currentView === 'car' ? 'translate-y-0' : 'translate-y-full'
               }`}>
                 <div className="px-6 pb-6 h-full flex flex-col">
-                  {showCarDetails && (
-                    <div className="flex items-center mb-4">
+                  <div className="flex items-center mb-6">
+                    {showCarDetails && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
                           setShowCarDetails(false);
                           setSelectedCar('current');
-                          setDragHeight(40);
+                          setDragHeight(70);
                         }}
                         className="mr-2 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200"
                       >
                         ←
                       </Button>
-                      <h3 className="font-bold text-black text-lg">Vehicle Information</h3>
-                    </div>
-                  )}
-                  
-                  {!showCarDetails && (
-                    <h3 className="font-bold text-black mb-4 text-lg">Hey there, need help?</h3>
-                  )}
+                    )}
+                    <h3 className="font-bold text-black text-lg">
+                      {showCarDetails ? 'Vehicle Information' : 'Hey there, need help?'}
+                    </h3>
+                  </div>
                   
                   {!showCarDetails && (
                     <div className="space-y-4 mb-6">
@@ -1857,7 +1859,7 @@ export default function UserMap() {
               onClick={() => {
                 setCurrentView('car');
                 setShowCarDetails(false);
-                setDragHeight(50);
+                setDragHeight(70);
               }}
               className="flex flex-col items-center space-y-1"
             >
@@ -1874,7 +1876,7 @@ export default function UserMap() {
             </button>
             
             <button
-              onClick={handleProfileClick}
+              onClick={() => setLocation('/user-profile')}
               className="flex flex-col items-center space-y-1"
             >
               <User className="w-6 h-6 text-gray-400" />

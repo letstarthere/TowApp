@@ -63,7 +63,7 @@ export default function TripHistory() {
   ]);
 
   const handleBack = () => {
-    setLocation("/profile");
+    setLocation("/user-map");
   };
 
   const handleDownloadInvoice = async (trip: any) => {
