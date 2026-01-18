@@ -39,22 +39,17 @@ export default function DriverAuth() {
       
       return apiRequest("POST", endpoint, payload);
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Save user to localStorage for persistence
+      const response = await data.json();
+      localStorage.setItem('user', JSON.stringify(response));
+      
       // Invalidate auth cache to trigger user data refetch
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       
-      toast({
-        title: "Success",
-        description: isLogin ? "Logged in successfully" : "Driver account created successfully",
-      });
-      
-      // Navigate to appropriate dashboard based on user type
+      // Navigate to driver dashboard
       setTimeout(() => {
-        if (data.userType === 'driver') {
-          setLocation("/driver-map");
-        } else {
-          setLocation("/role-selection"); // Fallback
-        }
+        setLocation("/driver-map");
       }, 100);
     },
     onError: (error) => {

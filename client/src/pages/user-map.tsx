@@ -27,12 +27,25 @@ import type { DriverWithUser, MockDriver } from "@/lib/types";
 export default function UserMap() {
   const [, setLocation] = useLocation();
   const [pickupLocation, setPickupLocation] = useState("Current Location");
-  const [dropoffLocation, setDropoffLocation] = useState("");
+  const [dropoffLocation, setDropoffLocation] = useState(() => localStorage.getItem('dropoffLocation') || '');
+  
+  // Save dropoff location to localStorage
+  useEffect(() => {
+    localStorage.setItem('dropoffLocation', dropoffLocation);
+  }, [dropoffLocation]);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<MockDriver | null>(null);
   const [nearestDriver, setNearestDriver] = useState<MockDriver | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [currentView, setCurrentView] = useState<'car' | 'location' | 'trucks' | 'confirm'>('car');
+  const [currentView, setCurrentView] = useState<'car' | 'location' | 'trucks' | 'confirm'>(() => {
+    const saved = localStorage.getItem('currentView');
+    return (saved as any) || 'car';
+  });
+  
+  // Save current view to localStorage
+  useEffect(() => {
+    localStorage.setItem('currentView', currentView);
+  }, [currentView]);
   const [isBottomSheetVisible, setIsBottomSheetVisible] = useState(false);
   const [isCardTransitioning, setIsCardTransitioning] = useState(false);
   const [selectedStandardDriver, setSelectedStandardDriver] = useState<number>(1); // Auto-select first standard driver
@@ -321,16 +334,54 @@ export default function UserMap() {
     },
   });
 
-  const [selectedCar, setSelectedCar] = useState<'current' | 'different' | null>('current');
+  const [selectedCar, setSelectedCar] = useState<'current' | 'different' | null>(() => {
+    const saved = localStorage.getItem('selectedCar');
+    return (saved as any) || 'current';
+  });
+  
+  // Save selected car to localStorage
+  useEffect(() => {
+    if (selectedCar) {
+      localStorage.setItem('selectedCar', selectedCar);
+    }
+  }, [selectedCar]);
   const [showCarDetails, setShowCarDetails] = useState(false);
-  const [carPhotos, setCarPhotos] = useState<{[key: string]: string}>({});
+  const [carPhotos, setCarPhotos] = useState<{[key: string]: string}>(() => {
+    const saved = localStorage.getItem('carPhotos');
+    return saved ? JSON.parse(saved) : {};
+  });
+  
+  // Save photos to localStorage whenever they change
+  useEffect(() => {
+    if (Object.keys(carPhotos).length > 0) {
+      localStorage.setItem('carPhotos', JSON.stringify(carPhotos));
+    }
+  }, [carPhotos]);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [currentPhotoSide, setCurrentPhotoSide] = useState<string>('');
-  const [vehicleSearch, setVehicleSearch] = useState('');
+  const [vehicleSearch, setVehicleSearch] = useState(() => localStorage.getItem('vehicleSearch') || '');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
-  const [licensePlate, setLicensePlate] = useState('');
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(() => {
+    const saved = localStorage.getItem('selectedVehicle');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [licensePlate, setLicensePlate] = useState(() => localStorage.getItem('licensePlate') || '');
+  
+  // Save vehicle data to localStorage
+  useEffect(() => {
+    localStorage.setItem('vehicleSearch', vehicleSearch);
+  }, [vehicleSearch]);
+  
+  useEffect(() => {
+    if (selectedVehicle) {
+      localStorage.setItem('selectedVehicle', JSON.stringify(selectedVehicle));
+    }
+  }, [selectedVehicle]);
+  
+  useEffect(() => {
+    localStorage.setItem('licensePlate', licensePlate);
+  }, [licensePlate]);
   
   // Vehicle database for fuzzy search
   const vehicleDatabase = [
@@ -491,10 +542,8 @@ export default function UserMap() {
     try {
       setIsUploadingPhoto(true);
       
-      // Use Capacitor Camera plugin for better mobile support
       const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
       
-      // Request camera permission first
       const permissions = await Camera.requestPermissions({ permissions: ['camera'] });
       if (permissions.camera !== 'granted') {
         toast({
@@ -508,16 +557,18 @@ export default function UserMap() {
       }
       
       const image = await Camera.getPhoto({
-        quality: 40,
+        quality: 30,
         allowEditing: false,
-        resultType: CameraResultType.DataUrl,
+        resultType: CameraResultType.Base64,
         source: CameraSource.Camera,
-        width: 640,
-        height: 480
+        width: 480,
+        height: 360,
+        saveToGallery: false
       });
       
-      if (image.dataUrl) {
-        setCarPhotos(prev => ({ ...prev, [currentPhotoSide]: image.dataUrl! }));
+      if (image.base64String) {
+        const base64 = `data:image/jpeg;base64,${image.base64String}`;
+        setCarPhotos(prev => ({ ...prev, [currentPhotoSide]: base64 }));
       }
       
       setShowCameraModal(false);
@@ -552,33 +603,35 @@ export default function UserMap() {
         return;
       }
       
-      const image = await Promise.race([
-        Camera.getPhoto({
-          quality: 40,
-          allowEditing: false,
-          resultType: CameraResultType.DataUrl,
-          source: CameraSource.Photos,
-          width: 640,
-          height: 480
-        }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Gallery selection timeout')), 30000)
-        )
-      ]) as any;
+      const image = await Camera.getPhoto({
+        quality: 30,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Photos,
+        width: 480,
+        height: 360
+      });
       
-      if (image?.dataUrl) {
-        setCarPhotos(prev => ({ ...prev, [currentPhotoSide]: image.dataUrl! }));
+      if (image.base64String) {
+        const base64 = `data:image/jpeg;base64,${image.base64String}`;
+        setCarPhotos(prev => ({ ...prev, [currentPhotoSide]: base64 }));
       }
       
       setShowCameraModal(false);
       setIsUploadingPhoto(false);
     } catch (error: any) {
       console.error('Gallery error:', error);
+      
+      // User cancelled - just close modal without error
+      if (error.message && error.message.includes('cancel')) {
+        setShowCameraModal(false);
+        setIsUploadingPhoto(false);
+        return;
+      }
+      
       toast({
         title: "Gallery Error",
-        description: error.message === 'Gallery selection timeout' 
-          ? "Selection took too long. Please try again." 
-          : "Unable to access photo gallery. Please check permissions.",
+        description: "Unable to access photo gallery. Please check permissions.",
         variant: "destructive"
       });
       setShowCameraModal(false);

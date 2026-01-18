@@ -85,6 +85,7 @@ function Router() {
             {user.userType === 'user' ? (
               <>
                 <Route path="/profile" component={UserProfile} />
+                <Route path="/user-profile" component={UserProfile} />
                 <Route path="/payment-methods" component={PaymentMethods} />
                 <Route path="/trip-history" component={TripHistory} />
               </>

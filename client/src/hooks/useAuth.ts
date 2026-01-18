@@ -10,12 +10,20 @@ export function useAuth() {
       // Always check localStorage first
       const savedUser = localStorage.getItem('user');
       if (savedUser) {
-        return JSON.parse(savedUser);
+        try {
+          return JSON.parse(savedUser);
+        } catch (e) {
+          localStorage.removeItem('user');
+        }
       }
       
       // If not in localStorage and not using mock data, try API
       if (!USE_MOCK_DATA) {
-        return getQueryFn({ on401: "returnNull" })();
+        try {
+          return await getQueryFn({ on401: "returnNull" })();
+        } catch (e) {
+          return null;
+        }
       }
       
       return null;
