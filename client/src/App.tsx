@@ -16,6 +16,7 @@ import UserMap from "@/pages/user-map";
 import DriverMap from "@/pages/driver-map";
 import UserProfile from "@/pages/user-profile";
 import DriverProfile from "@/pages/driver-profile";
+import PersonalInfo from "@/pages/personal-info";
 import PaymentMethods from "@/pages/payment-methods";
 import TripHistory from "@/pages/trip-history";
 import DriverEarnings from "@/pages/driver/earnings";
@@ -80,6 +81,7 @@ function Router() {
         <Route path="/user-map" component={UserMap} />
         <Route path="/driver-map" component={DriverMap} />
         <Route path="/user-profile" component={UserProfile} />
+        <Route path="/personal-info" component={PersonalInfo} />
         <Route path="/profile" component={UserProfile} />
         <Route path="/payment-methods" component={PaymentMethods} />
         <Route path="/trip-history" component={TripHistory} />

@@ -827,7 +827,7 @@ export default function UserMap() {
   };
 
   const handleProfileClick = () => {
-    setLocation("/user-profile");
+    setLocation("/personal-info");
   };
   
   const handleMenuClick = () => {
@@ -922,14 +922,21 @@ export default function UserMap() {
           </div>
           
           {/* Location Button */}
-          <div className="absolute bottom-[calc(50vh+2rem)] right-4 z-10">
+          <div className="absolute bottom-[calc(70vh+2rem)] right-4 z-10">
             <Button
               variant="ghost"
               size="icon"
               className="w-12 h-12 bg-orange-500 rounded-full shadow-lg hover:bg-orange-600"
               onClick={() => {
-                if (location) {
-                  // Map will re-center to user location
+                if (location && map) {
+                  // Re-center map to user location
+                  const userPos = { lat: location.latitude, lng: location.longitude };
+                  if (window.google?.maps) {
+                    const mapInstance = document.querySelector('[data-map]');
+                    if (mapInstance) {
+                      window.google.maps.event.trigger(mapInstance, 'resize');
+                    }
+                  }
                   window.location.reload();
                 }
               }}
