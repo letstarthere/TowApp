@@ -1022,7 +1022,7 @@ export default function UserMap() {
             <div className="px-6 pb-4">
               {currentView === 'car' ? (
                 <div>
-                  <h3 className="font-bold text-black mb-4 text-lg">Vehicle Information</h3>
+                  <h3 className="font-bold text-black mb-6 text-lg">Vehicle Information</h3>
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="font-semibold">{currentCar.make} {currentCar.model}</p>
@@ -1033,7 +1033,7 @@ export default function UserMap() {
                 </div>
               ) : currentView === 'location' ? (
                 <div>
-                  <h3 className="font-bold text-black mb-4 text-lg">Where should the vehicle be taken?</h3>
+                  <h3 className="font-bold text-black mb-6 text-lg">Where should the vehicle be taken?</h3>
                   <div className="relative">
                     <Input
                       ref={dropoffInputRef}
@@ -1129,7 +1129,7 @@ export default function UserMap() {
                 </div>
               ) : (
                 <div>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-6">
                     <div>
                       <h3 className="font-bold text-black text-lg">Standard Tow Service</h3>
                       <p className="text-sm text-gray-600">15-20 min • ⭐ 4.2</p>
@@ -1391,7 +1391,7 @@ export default function UserMap() {
                 currentView === 'location' ? 'translate-y-0' : 'translate-y-full'
               }`}>
                 <div className="px-6 pb-6 h-full flex flex-col">
-                  <h3 className="font-bold text-black mb-4 text-lg">Where should the vehicle be taken?</h3>
+                  <h3 className="font-bold text-black mb-6 text-lg">Where should the vehicle be taken?</h3>
                   
                   <div className="mb-4 relative">
                     <Input
@@ -1429,7 +1429,7 @@ export default function UserMap() {
                 currentView === 'trucks' ? 'translate-y-0' : currentView === 'location' ? 'translate-y-full' : '-translate-y-full'
               }`}>
                 <div className="px-6 pb-6 h-full overflow-hidden flex flex-col">
-                  <div className="flex items-center mb-4">
+                  <div className="flex items-center mb-6">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1525,7 +1525,7 @@ export default function UserMap() {
                 currentView === 'confirm' ? 'translate-y-0' : 'translate-y-full'
               }`}>
                 <div className="px-6 pb-6 h-full flex flex-col">
-                  <div className="flex items-center mb-4">
+                  <div className="flex items-center mb-6">
                     <Button
                       variant="ghost"
                       size="sm"
