@@ -1019,35 +1019,43 @@ export default function UserMap() {
               </p>
             </div>
           ) : isMinimized ? (
-            <div className="px-6 pb-4">
+            <div className="px-6 pb-6 h-full flex flex-col">
+              <div className="mb-6">
+                {currentView === 'car' && (
+                  <h3 className="font-bold text-black text-lg">Vehicle Information</h3>
+                )}
+                {currentView === 'location' && (
+                  <h3 className="font-bold text-black text-lg">Where should the vehicle be taken?</h3>
+                )}
+                {currentView === 'confirm' && selectedDriver && (
+                  <h3 className="font-bold text-black text-lg">Confirm Request</h3>
+                )}
+                {currentView === 'trucks' && (
+                  <h3 className="font-bold text-black text-lg">Standard Tow Service</h3>
+                )}
+              </div>
+              
               {currentView === 'car' ? (
-                <div>
-                  <h3 className="font-bold text-black mb-6 text-lg">Vehicle Information</h3>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-semibold">{currentCar.make} {currentCar.model}</p>
-                      <p className="text-sm text-gray-600">{currentCar.year} • {currentCar.color}</p>
-                    </div>
-                    <p className="text-sm text-gray-600">{currentCar.licensePlate}</p>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-semibold">{currentCar.make} {currentCar.model}</p>
+                    <p className="text-sm text-gray-600">{currentCar.year} • {currentCar.color}</p>
                   </div>
+                  <p className="text-sm text-gray-600">{currentCar.licensePlate}</p>
                 </div>
               ) : currentView === 'location' ? (
-                <div>
-                  <h3 className="font-bold text-black mb-6 text-lg">Where should the vehicle be taken?</h3>
-                  <div className="relative">
-                    <Input
-                      ref={dropoffInputRef}
-                      placeholder="Enter destination"
-                      value={dropoffLocation}
-                      onChange={(e) => setDropoffLocation(e.target.value)}
-                      className="w-full p-4 pr-12 text-lg border-2 border-gray-200 rounded-xl"
-                    />
-                    <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  </div>
+                <div className="relative">
+                  <Input
+                    ref={dropoffInputRef}
+                    placeholder="Enter destination"
+                    value={dropoffLocation}
+                    onChange={(e) => setDropoffLocation(e.target.value)}
+                    className="w-full p-4 pr-12 text-lg border-2 border-gray-200 rounded-xl"
+                  />
+                  <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 </div>
               ) : currentView === 'confirm' && selectedDriver ? (
                 <div>
-                  {/* Add towing car image for standard services */}
                   {selectedDriver.type !== 'premium' && (
                     <div className="flex justify-center mb-4">
                       <img 
@@ -1129,9 +1137,8 @@ export default function UserMap() {
                 </div>
               ) : (
                 <div>
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="font-bold text-black text-lg">Standard Tow Service</h3>
                       <p className="text-sm text-gray-600">15-20 min • ⭐ 4.2</p>
                     </div>
                     <p className="font-bold text-orange-500 text-xl">R{truckPricing[selectedStandardDriver] || 350}</p>
