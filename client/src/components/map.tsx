@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { DriverWithUser, RequestWithDetails } from "@/lib/types";
@@ -38,17 +38,15 @@ export default function Map({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const pulseElementRef = useRef<HTMLDivElement | null>(null);
   const destinationMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const distanceLabelRef = useRef<mapboxgl.Marker | null>(null);
+  const demoTrucksRef = useRef<{ marker: mapboxgl.Marker; position: [number, number]; direction: number }[]>([]);
 
   // Initialize Mapbox
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const defaultCenter = center || 
-      (userLocation ? [userLocation.longitude, userLocation.latitude] : 
-      [28.0473, -26.2041]); // Johannesburg default
+    const defaultCenter = userLocation ? [userLocation.longitude, userLocation.latitude] : 
+      center ? [center.lng, center.lat] : [28.0473, -26.2041];
 
     mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current,
@@ -61,18 +59,27 @@ export default function Map({
     mapRef.current.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
     return () => {
+      demoTrucksRef.current.forEach(t => t.marker.remove());
       mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
 
-
+  // Center on user location
+  useEffect(() => {
+    if (mapRef.current && userLocation) {
+      mapRef.current.flyTo({
+        center: [userLocation.longitude, userLocation.latitude],
+        zoom: 13,
+        duration: 1000
+      });
+    }
+  }, [userLocation]);
 
   // Update markers
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Clear existing markers
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
@@ -86,7 +93,6 @@ export default function Map({
         const pulse = document.createElement('div');
         pulse.style.cssText = 'position:absolute;width:50px;height:50px;background:rgba(249,115,22,0.2);border:2px solid rgba(249,115,22,0.8);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);animation:pulse 2s infinite';
         el.appendChild(pulse);
-        pulseElementRef.current = pulse;
         
         userMarkerRef.current = new mapboxgl.Marker({ element: el })
           .setLngLat([userLocation.longitude, userLocation.latitude])
@@ -134,34 +140,63 @@ export default function Map({
     }
   }, [drivers, userLocation, isDriver, requests, onDriverClick, driverLocation, showRoute]);
 
-  // Draw route to destination
+  // Demo moving tow trucks
+  useEffect(() => {
+    if (!mapRef.current || !userLocation || isDriver) return;
+
+    if (demoTrucksRef.current.length === 0) {
+      const truckPositions: [number, number][] = [
+        [userLocation.longitude + 0.01, userLocation.latitude + 0.01],
+        [userLocation.longitude - 0.01, userLocation.latitude - 0.01],
+        [userLocation.longitude + 0.015, userLocation.latitude - 0.005],
+        [userLocation.longitude - 0.008, userLocation.latitude + 0.012]
+      ];
+
+      truckPositions.forEach((pos) => {
+        const el = document.createElement('div');
+        el.style.cssText = 'width:32px;height:32px;background-image:url(/attached_assets/yellow-tow-truck-icon.png);background-size:cover;transition:transform 0.5s linear';
+        const marker = new mapboxgl.Marker({ element: el, rotationAlignment: 'map' })
+          .setLngLat(pos)
+          .addTo(mapRef.current!);
+        demoTrucksRef.current.push({ marker, position: pos, direction: Math.random() * 360 });
+      });
+    }
+
+    const interval = setInterval(() => {
+      demoTrucksRef.current.forEach(truck => {
+        const speed = 0.0001;
+        truck.direction += (Math.random() - 0.5) * 20;
+        const rad = (truck.direction * Math.PI) / 180;
+        truck.position[0] += Math.cos(rad) * speed;
+        truck.position[1] += Math.sin(rad) * speed;
+        truck.marker.setLngLat(truck.position);
+        (truck.marker.getElement() as HTMLElement).style.transform = `rotate(${truck.direction}deg)`;
+      });
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [userLocation, isDriver]);
+
+  // Draw route to destination with geocoding
   useEffect(() => {
     if (!mapRef.current || !userLocation || isDriver || !destination) return;
 
     const getRoute = async () => {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(destination)}.json?access_token=${mapboxgl.accessToken}`
-      );
-      const data = await response.json();
-      if (data.features?.[0]) {
-        const destCoords = data.features[0].center;
+      try {
+        const geoResponse = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(destination)}.json?access_token=${mapboxgl.accessToken}&limit=1`
+        );
+        const geoData = await geoResponse.json();
+        if (!geoData.features?.[0]) return;
         
-        // Add destination marker
-        if (destinationMarkerRef.current) {
-          destinationMarkerRef.current.remove();
-        }
+        const destCoords = geoData.features[0].center;
+        
+        if (destinationMarkerRef.current) destinationMarkerRef.current.remove();
         const destEl = document.createElement('div');
-        destEl.style.cssText = 'width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:24px solid #ef4444;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
+        destEl.style.cssText = 'width:30px;height:30px;background:#ef4444;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)';
         destinationMarkerRef.current = new mapboxgl.Marker({ element: destEl, anchor: 'bottom' })
           .setLngLat(destCoords as [number, number])
           .addTo(mapRef.current!);
-        
-        // Calculate distance
-        const distance = mapRef.current!.getSource('route') ? 0 : 
-          Math.sqrt(
-            Math.pow((destCoords[0] - userLocation.longitude) * 111320 * Math.cos(userLocation.latitude * Math.PI / 180), 2) +
-            Math.pow((destCoords[1] - userLocation.latitude) * 110540, 2)
-          );
         
         const routeResponse = await fetch(
           `https://api.mapbox.com/directions/v5/mapbox/driving/${userLocation.longitude},${userLocation.latitude};${destCoords[0]},${destCoords[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
@@ -169,19 +204,6 @@ export default function Map({
         const routeData = await routeResponse.json();
         if (routeData.routes?.[0]) {
           const route = routeData.routes[0].geometry;
-          const distanceKm = routeData.routes[0].distance / 1000;
-          const distanceText = distanceKm >= 1 ? `${distanceKm.toFixed(1)} km` : `${Math.round(routeData.routes[0].distance)} m`;
-          
-          // Add distance label
-          if (distanceLabelRef.current) {
-            distanceLabelRef.current.remove();
-          }
-          const labelEl = document.createElement('div');
-          labelEl.style.cssText = 'background:#ff7b29;color:white;padding:4px 8px;border-radius:4px;font-weight:bold;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.2)';
-          labelEl.textContent = distanceText;
-          distanceLabelRef.current = new mapboxgl.Marker({ element: labelEl, anchor: 'bottom' })
-            .setLngLat([destCoords[0], destCoords[1] + 0.001] as [number, number])
-            .addTo(mapRef.current!);
           
           if (mapRef.current!.getSource('route')) {
             (mapRef.current!.getSource('route') as mapboxgl.GeoJSONSource).setData(route);
@@ -191,10 +213,18 @@ export default function Map({
               id: 'route',
               type: 'line',
               source: 'route',
-              paint: { 'line-color': '#f97316', 'line-width': 6, 'line-opacity': 0.9 }
+              paint: { 'line-color': '#f97316', 'line-width': 6, 'line-opacity': 0.9 },
+              layout: { 'line-join': 'round', 'line-cap': 'round' }
             });
           }
+          
+          const bounds = new mapboxgl.LngLatBounds();
+          bounds.extend([userLocation.longitude, userLocation.latitude]);
+          bounds.extend(destCoords as [number, number]);
+          mapRef.current!.fitBounds(bounds, { padding: 80, duration: 1500 });
         }
+      } catch (error) {
+        console.error('Route error:', error);
       }
     };
     getRoute();

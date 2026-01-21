@@ -657,10 +657,10 @@ export default function UserMap() {
 
   const [recentLocations] = useState([
     'Sandton City Mall, Johannesburg',
-    'OR Tambo International Airport',
-    'Mall of Africa, Midrand',
-    'Menlyn Park Shopping Centre, Pretoria'
+    'OR Tambo International Airport'
   ]);
+
+  const homeAddress = '123 Main St, Johannesburg';
 
   const handleCarSelect = (carType: 'current' | 'different') => {
     setSelectedCar(carType);
@@ -675,14 +675,15 @@ export default function UserMap() {
 
   const handleCarConfirm = () => {
     setCurrentView('location');
-    setDragHeight(40);
+    setDragHeight(50);
     setShowCarDetails(false);
   };
 
   const handleLocationSelect = (location: string) => {
     setDropoffLocation(location);
     setCurrentView('trucks');
-    setDragHeight(80); // Auto-expand to 80% when showing trucks
+    setDragHeight(80);
+    setMapKey(prev => prev + 1);
   };
 
   const handleDriverSelect = (driver: MockDriver) => {
@@ -703,7 +704,7 @@ export default function UserMap() {
 
   const handleBackToLocation = () => {
     setCurrentView('location');
-    setDragHeight(40); // Slide back down to show more map
+    setDragHeight(50);
   };
 
   const handleRequestConfirm = async () => {
@@ -1452,13 +1453,29 @@ export default function UserMap() {
                       placeholder="Enter destination"
                       value={dropoffLocation}
                       onChange={(e) => setDropoffLocation(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && dropoffLocation) {
+                          handleLocationSelect(dropoffLocation);
+                        }
+                      }}
                       className="w-full p-4 pr-12 text-lg border-2 border-gray-200 rounded-xl"
                     />
                     <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   </div>
                   
-                  <div className="flex-1">
-                    <div className="flex items-center mb-3">
+                  <div className="flex-1 overflow-y-auto">
+                    <div 
+                      className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 mb-2 flex items-center space-x-3"
+                      onClick={() => handleLocationSelect(homeAddress)}
+                    >
+                      <Home className="w-5 h-5 text-orange-500" />
+                      <div>
+                        <p className="font-semibold text-sm">Home</p>
+                        <p className="text-sm text-gray-600">{homeAddress}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center mb-3 mt-4">
                       <History className="w-5 h-5 text-gray-600 mr-2" />
                       <h4 className="font-semibold text-gray-700">Recent locations</h4>
                     </div>
