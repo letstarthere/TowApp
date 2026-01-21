@@ -154,8 +154,9 @@ export default function Map({
       ];
 
       truckPositions.forEach((pos) => {
-        const el = document.createElement('div');
-        el.style.cssText = 'width:40px;height:40px;background-image:url(/attached_assets/yellow-tow-truck-icon.png);background-size:contain;background-repeat:no-repeat;transition:all 0.5s linear';
+        const el = document.createElement('img');
+        el.src = '/attached_assets/yellow-tow-truck-icon.png';
+        el.style.cssText = 'width:40px;height:40px;object-fit:contain;transition:all 0.5s linear';
         const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat(pos)
           .addTo(mapRef.current!);

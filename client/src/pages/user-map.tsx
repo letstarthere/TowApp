@@ -24,6 +24,12 @@ import TowTruckCard from "@/components/tow-truck-card";
 import { pushNotificationManager } from "@/lib/pushNotifications";
 import type { DriverWithUser, MockDriver } from "@/lib/types";
 
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 export default function UserMap() {
   const [, setLocation] = useLocation();
   const [pickupLocation, setPickupLocation] = useState("Current Location");
