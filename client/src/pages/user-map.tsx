@@ -63,7 +63,7 @@ export default function UserMap() {
   const [selectedPayment, setSelectedPayment] = useState('Apple Pay');
   const [selectedPremiumProvider, setSelectedPremiumProvider] = useState<string | null>(null);
   const [truckPricing, setTruckPricing] = useState<Record<number, number>>({});
-  const [dragHeight, setDragHeight] = useState(70); // Height as percentage
+  const [dragHeight, setDragHeight] = useState(50); // Height as percentage
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
   const [startHeight, setStartHeight] = useState(40);
@@ -796,7 +796,7 @@ export default function UserMap() {
     setIsDragging(false);
     
     // Define snap positions based on current view
-    const snapPositions = currentView === 'location' ? [20, 40] : currentView === 'car' && showCarDetails && selectedCar === 'different' ? [95] : currentView === 'car' && showCarDetails ? [80] : [20, 40, 80];
+    const snapPositions = currentView === 'location' ? [20, 40] : currentView === 'car' && showCarDetails && selectedCar === 'different' ? [95] : currentView === 'car' && showCarDetails ? [80] : currentView === 'car' ? [20, 50] : [20, 40, 80];
     
     // Find closest snap position
     let closestPosition = snapPositions[0];
@@ -916,9 +916,15 @@ export default function UserMap() {
             {/* Menu Icon */}
             <div className="transition-all duration-500 ease-in-out bg-white shadow-lg flex items-center cursor-pointer w-10 h-10 rounded-full" onClick={handleMenuClick}>
               <div className="w-full h-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                <img 
+                  src="/attached_assets/user_profile_image.png" 
+                  alt="Profile" 
+                  className="w-full h-full rounded-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.innerHTML = '<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>';
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -955,7 +961,7 @@ export default function UserMap() {
           }}
         >
           {/* Drag Handle - only show when not on initial car view */}
-          {!isSearching && !towingInProgress && currentView !== 'car' && (
+          {!isSearching && !towingInProgress && (
             <div 
               className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-6 cursor-grab active:cursor-grabbing hover:bg-gray-400 transition-colors"
               onMouseDown={handleDragStart}
@@ -1014,7 +1020,34 @@ export default function UserMap() {
             </div>
           ) : isMinimized ? (
             <div className="px-6 pb-6 h-full flex flex-col">
-              <div className="mb-6 mt-4">
+              {currentView === 'car' && (
+                <>
+                  <div className="mb-4 mt-4">
+                    <h3 className="font-bold text-black text-lg">Hey there, need help?</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div 
+                      className={`p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-all duration-300 ${
+                        selectedCar === 'current' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'
+                      }`}
+                      onClick={() => {
+                        setIsMinimized(false);
+                        setDragHeight(50);
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold">Tow Your Car</h3>
+                          <p className="text-sm text-gray-600">{currentCar.make} {currentCar.model} • {currentCar.licensePlate}</p>
+                        </div>
+                        <ChevronDown className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+              {currentView !== 'car' && (
+                <div className="mb-6 mt-4">
                 {currentView === 'car' && (
                   <h3 className="font-bold text-black text-lg">Vehicle Information</h3>
                 )}
@@ -1028,7 +1061,7 @@ export default function UserMap() {
                   <h3 className="font-bold text-black text-lg">Standard Tow Service</h3>
                 )}
               </div>
-              
+              )}
               {currentView === 'car' ? (
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
@@ -1867,7 +1900,7 @@ export default function UserMap() {
               onClick={() => {
                 setCurrentView('car');
                 setShowCarDetails(false);
-                setDragHeight(70);
+                setDragHeight(50);
               }}
               className="flex flex-col items-center space-y-1"
             >

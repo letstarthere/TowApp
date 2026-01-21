@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, MapPin, Clock, Phone, Star } from "lucide-react";
-import driverProfileImage from "../../../attached_assets/driver_profile_image.png";
+import driverProfileImage from "../../../attached_assets/driverimage.jpeg";
 import towTruckImage from "../../../attached_assets/white-long-flatbed-tow-truck.svg";
 
 interface DriverOnWayProps {

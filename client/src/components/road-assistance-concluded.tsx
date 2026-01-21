@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, Download, Eye, CheckCircle, Camera, FileText, Check } from "lucide-react";
 import logoPath from "@assets/blackapplogo.png";
-import driverProfileImage from "../../../attached_assets/driver_profile_image.png";
+import driverProfileImage from "../../../attached_assets/driverimage.jpeg";
 import towTruckImage from "../../../attached_assets/white-long-flatbed-tow-truck.svg";
 
 interface RoadAssistanceConcludedProps {

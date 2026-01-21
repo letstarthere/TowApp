@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Star } from "lucide-react";
-import driverProfileImage from "../../../attached_assets/driver_profile_image.png";
+import driverProfileImage from "../../../attached_assets/driverimage.jpeg";
 import towTruckImage from "../../../attached_assets/white-long-flatbed-tow-truck.svg";
 import delegationIcon from "../../../attached_assets/delegationicon.png";
 
