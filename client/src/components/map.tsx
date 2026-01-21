@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Truck, MapPin } from "lucide-react";
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import type { DriverWithUser, RequestWithDetails } from "@/lib/types";
+
+mapboxgl.accessToken = 'pk.eyJ1Ijoic2VhbmJhbXBvZS0xMjMiLCJhIjoiY21rbnkzNWZ3MDBrYjNscW4yNGJsbHBxYiJ9.BJHCl5yY8vUv_1lwOgMjuA';
 
 interface MapProps {
   center?: { lat: number; lng: number };
@@ -17,13 +20,6 @@ interface MapProps {
   routePhase?: 'pickup' | 'delivery';
 }
 
-declare global {
-  interface Window {
-    google: any;
-    initMap: () => void;
-  }
-}
-
 export default function Map({ 
   center, 
   drivers, 
@@ -38,446 +34,234 @@ export default function Map({
   showRoute = false,
   routePhase = 'pickup'
 }: MapProps) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<any>(null);
-  const [markers, setMarkers] = useState<any[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [currentDirections, setCurrentDirections] = useState<any>(null);
-  const [directionsRenderer, setDirectionsRenderer] = useState<any>(null);
-  const [destinationMarker, setDestinationMarker] = useState<any>(null);
-  const [distanceLabel, setDistanceLabel] = useState<any>(null);
-  const userMarkerRef = useRef<any>(null);
-  const pulseCircleRef = useRef<any>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const pulseElementRef = useRef<HTMLDivElement | null>(null);
+  const destinationMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const distanceLabelRef = useRef<mapboxgl.Marker | null>(null);
 
-  // Load Google Maps script
+  // Initialize Mapbox
   useEffect(() => {
-    const loadGoogleMaps = async () => {
-      if (window.google?.maps) {
-        setIsLoaded(true);
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/config/maps');
-        const config = await response.json();
-        
-        if (!config.apiKey) {
-          console.error('Google Maps API key not configured');
-          return;
-        }
-
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${config.apiKey}&libraries=places,geometry&callback=initMap`;
-        script.async = true;
-        script.defer = true;
-        script.onerror = () => {
-          console.error('Failed to load Google Maps script');
-        };
-        
-        window.initMap = () => {
-          setIsLoaded(true);
-        };
-        
-        document.head.appendChild(script);
-        
-        return () => {
-          if (document.head.contains(script)) {
-            document.head.removeChild(script);
-          }
-        };
-      } catch (error) {
-        console.error('Failed to load Google Maps:', error);
-      }
-    };
-
-    loadGoogleMaps();
-  }, []);
-
-  // Initialize map when Google Maps is loaded
-  useEffect(() => {
-    if (!isLoaded || !mapRef.current || !window.google) return;
+    if (!mapContainerRef.current || mapRef.current) return;
 
     const defaultCenter = center || 
-      (userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : 
-      { lat: -26.2041, lng: 28.0473 }); // Johannesburg default
+      (userLocation ? [userLocation.longitude, userLocation.latitude] : 
+      [28.0473, -26.2041]); // Johannesburg default
 
-    const mapInstance = new window.google.maps.Map(mapRef.current, {
-      center: defaultCenter,
+    mapRef.current = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: defaultCenter as [number, number],
       zoom: 13,
-      styles: [
-        {
-          "featureType": "poi",
-          "elementType": "labels",
-          "stylers": [{ "visibility": "off" }]
-        }
-      ],
-      gestureHandling: 'greedy',
-      zoomControl: false,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-      disableDefaultUI: true,
-      clickableIcons: false,
-      keyboardShortcuts: false
+      attributionControl: false
     });
+    
+    mapRef.current.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
-    // Initialize DirectionsRenderer
-    const renderer = new window.google.maps.DirectionsRenderer({
-      suppressMarkers: true,
-      polylineOptions: {
-        strokeColor: '#f97316', // Orange color
-        strokeWeight: 6,
-        strokeOpacity: 0.9
-      },
-      preserveViewport: true
-    });
-    renderer.setMap(mapInstance);
-    setDirectionsRenderer(renderer);
+    return () => {
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+  }, []);
 
-    setMap(mapInstance);
-  }, [isLoaded, center, userLocation]);
 
-  // Update markers when data changes
+
+  // Update markers
   useEffect(() => {
-    if (!map || !window.google) return;
+    if (!mapRef.current) return;
 
-    // Clear existing markers (except user marker)
-    markers.forEach(marker => marker.setMap(null));
-    const newMarkers: any[] = [];
+    // Clear existing markers
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
 
-    // Add or update user location marker with pulsing animation
+    // User location marker with pulse
     if (userLocation) {
       if (!userMarkerRef.current) {
-        // Create static user marker
-        userMarkerRef.current = new window.google.maps.Marker({
-          position: { lat: userLocation.latitude, lng: userLocation.longitude },
-          map: map,
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: '#f97316',
-            fillOpacity: 1,
-            strokeColor: 'white',
-            strokeWeight: 3,
-          },
-          title: 'Your location',
-          zIndex: 1000,
-          optimized: false
-        });
-
-        // Create pulsing circle
-        pulseCircleRef.current = new window.google.maps.Circle({
-          map: map,
-          center: { lat: userLocation.latitude, lng: userLocation.longitude },
-          radius: 50,
-          strokeColor: '#f97316',
-          strokeOpacity: 0.8,
-          strokeWeight: 2,
-          fillColor: '#f97316',
-          fillOpacity: 0.2,
-          zIndex: 999
-        });
-
-        // Animate pulse
-        let growing = true;
-        let radius = 50;
-        setInterval(() => {
-          if (growing) {
-            radius += 2;
-            if (radius >= 100) growing = false;
-          } else {
-            radius -= 2;
-            if (radius <= 50) growing = true;
-          }
-          if (pulseCircleRef.current) {
-            pulseCircleRef.current.setRadius(radius);
-          }
-        }, 50);
+        const el = document.createElement('div');
+        el.className = 'user-marker';
+        el.style.cssText = 'width:16px;height:16px;background:#f97316;border:3px solid white;border-radius:50%;box-shadow:0 0 10px rgba(249,115,22,0.5)';
+        
+        const pulse = document.createElement('div');
+        pulse.style.cssText = 'position:absolute;width:50px;height:50px;background:rgba(249,115,22,0.2);border:2px solid rgba(249,115,22,0.8);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);animation:pulse 2s infinite';
+        el.appendChild(pulse);
+        pulseElementRef.current = pulse;
+        
+        userMarkerRef.current = new mapboxgl.Marker({ element: el })
+          .setLngLat([userLocation.longitude, userLocation.latitude])
+          .addTo(mapRef.current);
       } else {
-        // Update position without recreating
-        userMarkerRef.current.setPosition({ lat: userLocation.latitude, lng: userLocation.longitude });
-        if (pulseCircleRef.current) {
-          pulseCircleRef.current.setCenter({ lat: userLocation.latitude, lng: userLocation.longitude });
-        }
+        userMarkerRef.current.setLngLat([userLocation.longitude, userLocation.latitude]);
       }
     }
 
-    // Add driver location marker when showing route
+    // Driver location marker
     if (driverLocation && showRoute) {
-      const driverMarker = new window.google.maps.Marker({
-        position: { lat: driverLocation.latitude, lng: driverLocation.longitude },
-        map: map,
-        icon: {
-          url: '/attached_assets/yellow-tow-truck-icon.png',
-          scaledSize: new window.google.maps.Size(48, 48),
-          anchor: new window.google.maps.Point(24, 24)
-        },
-        title: 'Your Driver - John Smith',
-        zIndex: 1000
-      });
-      newMarkers.push(driverMarker);
+      const el = document.createElement('div');
+      el.style.cssText = 'width:48px;height:48px;background-image:url(/attached_assets/yellow-tow-truck-icon.png);background-size:cover';
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([driverLocation.longitude, driverLocation.latitude])
+        .addTo(mapRef.current);
+      markersRef.current.push(marker);
     }
 
-    // Add driver markers for users
+    // Driver markers for users
     if (!isDriver) {
-      drivers.forEach((driver, index) => {
+      drivers.forEach(driver => {
         if (driver.currentLatitude && driver.currentLongitude) {
-          const position = {
-            lat: parseFloat(driver.currentLatitude.toString()),
-            lng: parseFloat(driver.currentLongitude.toString())
-          };
-
-          const driverMarker = new window.google.maps.Marker({
-            position: position,
-            map: map,
-            icon: {
-              url: '/shared/assets/yellow-tow-truck-icon.png',
-              scaledSize: new window.google.maps.Size(32, 32),
-              anchor: new window.google.maps.Point(16, 16)
-            },
-            title: `${driver.user.name} - ${driver.vehicleType}`,
-            zIndex: 500,
-            optimized: false
-          });
-
-          driverMarker.addListener('click', () => {
-            onDriverClick?.(driver);
-          });
-
-          newMarkers.push(driverMarker);
+          const el = document.createElement('div');
+          el.style.cssText = 'width:32px;height:32px;background-image:url(/shared/assets/yellow-tow-truck-icon.png);background-size:cover;cursor:pointer';
+          el.onclick = () => onDriverClick?.(driver);
+          const marker = new mapboxgl.Marker({ element: el })
+            .setLngLat([parseFloat(driver.currentLongitude.toString()), parseFloat(driver.currentLatitude.toString())])
+            .addTo(mapRef.current!);
+          markersRef.current.push(marker);
         }
       });
     }
 
-    // Add request markers for drivers
+    // Request markers for drivers
     if (isDriver) {
-      requests.forEach((request) => {
-        const position = {
-          lat: parseFloat(request.pickupLatitude.toString()),
-          lng: parseFloat(request.pickupLongitude.toString())
-        };
-
-        const requestMarker = new window.google.maps.Marker({
-          position: position,
-          map: map,
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 12,
-            fillColor: '#ef4444',
-            fillOpacity: 1,
-            strokeColor: 'white',
-            strokeWeight: 2,
-          },
-          title: `Pickup: ${request.pickupAddress}`,
-          animation: window.google.maps.Animation.BOUNCE
-        });
-
-        newMarkers.push(requestMarker);
+      requests.forEach(request => {
+        const el = document.createElement('div');
+        el.style.cssText = 'width:24px;height:24px;background:#ef4444;border:2px solid white;border-radius:50%;animation:bounce 1s infinite';
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([parseFloat(request.pickupLongitude.toString()), parseFloat(request.pickupLatitude.toString())])
+          .addTo(mapRef.current!);
+        markersRef.current.push(marker);
       });
     }
+  }, [drivers, userLocation, isDriver, requests, onDriverClick, driverLocation, showRoute]);
 
-    setMarkers(newMarkers);
-  }, [map, drivers, userLocation, isDriver, requests, onDriverClick, driverLocation, showRoute]);
-
-  // Draw directions to destination (only once)
+  // Draw route to destination
   useEffect(() => {
-    if (!map || !userLocation || !directionsRenderer || isDriver || !destination) return;
-    
-    // Clear existing markers if they exist
-    if (destinationMarker) {
-      destinationMarker.setMap(null);
-    }
-    if (distanceLabel) {
-      distanceLabel.setMap(null);
-    }
+    if (!mapRef.current || !userLocation || isDriver || !destination) return;
 
-    const userPos = { lat: userLocation.latitude, lng: userLocation.longitude };
-    
-    // Geocode destination address
-    const geocoder = new window.google.maps.Geocoder();
-    geocoder.geocode({ address: destination }, (results, status) => {
-      if (status === 'OK' && results?.[0]) {
-        const destinationPos = results[0].geometry.location;
+    const getRoute = async () => {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(destination)}.json?access_token=${mapboxgl.accessToken}`
+      );
+      const data = await response.json();
+      if (data.features?.[0]) {
+        const destCoords = data.features[0].center;
         
-        // Create destination marker
-        const destMarker = new window.google.maps.Marker({
-          position: destinationPos,
-          map: map,
-          icon: {
-            path: window.google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-            scale: 12,
-            fillColor: '#ef4444',
-            fillOpacity: 1,
-            strokeColor: 'white',
-            strokeWeight: 3,
-          },
-          title: 'Destination',
-          zIndex: 1000,
-          optimized: false
-        });
-        setDestinationMarker(destMarker);
+        // Add destination marker
+        if (destinationMarkerRef.current) {
+          destinationMarkerRef.current.remove();
+        }
+        const destEl = document.createElement('div');
+        destEl.style.cssText = 'width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:24px solid #ef4444;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
+        destinationMarkerRef.current = new mapboxgl.Marker({ element: destEl, anchor: 'bottom' })
+          .setLngLat(destCoords as [number, number])
+          .addTo(mapRef.current!);
         
         // Calculate distance
-        const distance = window.google.maps.geometry.spherical.computeDistanceBetween(
-          new window.google.maps.LatLng(userPos.lat, userPos.lng),
-          destinationPos
-        );
-        
-        const distanceText = distance >= 1000 
-          ? `${(distance / 1000).toFixed(1)} km`
-          : `${Math.round(distance)} m`;
-        
-        // Create distance label as marker
-        const labelMarker = new window.google.maps.Marker({
-          position: {
-            lat: destinationPos.lat() + 0.001,
-            lng: destinationPos.lng()
-          },
-          map: map,
-          icon: {
-            path: 'M 0,0 0,0',
-            strokeOpacity: 0,
-            fillOpacity: 0
-          },
-          label: {
-            text: distanceText,
-            color: '#ff7b29',
-            fontWeight: 'bold',
-            fontSize: '14px'
-          },
-          zIndex: 1001,
-          optimized: false
-        });
-        setDistanceLabel(labelMarker);
-        
-        // Create directions request
-        const directionsService = new window.google.maps.DirectionsService();
-        directionsService.route(
-          {
-            origin: userPos,
-            destination: destinationPos,
-            travelMode: window.google.maps.TravelMode.DRIVING,
-          },
-          (result, status) => {
-            if (status === 'OK' && result) {
-              directionsRenderer.setDirections(result);
-              setCurrentDirections(result);
-            }
-          }
-        );
-      }
-    });
-    
-  }, [map, userLocation, destination, directionsRenderer, isDriver, destinationMarker, distanceLabel]);
-
-  // Draw route based on phase (pickup or delivery)
-  useEffect(() => {
-    if (!map || !userLocation || !driverLocation || !showRoute || !directionsRenderer) return;
-    
-    // Update DirectionsRenderer options for orange route
-    directionsRenderer.setOptions({
-      suppressMarkers: true,
-      polylineOptions: {
-        strokeColor: '#f97316', // Orange color
-        strokeWeight: 6,
-        strokeOpacity: 0.9
-      }
-    });
-    
-    const directionsService = new window.google.maps.DirectionsService();
-    
-    let routeOrigin, routeDestination;
-    
-    if (routePhase === 'pickup') {
-      // Driver to user location
-      routeOrigin = { lat: driverLocation.latitude, lng: driverLocation.longitude };
-      routeDestination = { lat: userLocation.latitude, lng: userLocation.longitude };
-    } else {
-      // User location to final destination
-      if (!destination) return;
-      
-      // Geocode destination address
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ address: destination }, (results, status) => {
-        if (status === 'OK' && results?.[0]) {
-          const destinationPos = results[0].geometry.location;
-          
-          directionsService.route(
-            {
-              origin: { lat: userLocation.latitude, lng: userLocation.longitude },
-              destination: destinationPos,
-              travelMode: window.google.maps.TravelMode.DRIVING,
-            },
-            (result, status) => {
-              if (status === 'OK' && result) {
-                directionsRenderer.setDirections(result);
-                const bounds = new window.google.maps.LatLngBounds();
-                bounds.extend({ lat: userLocation.latitude, lng: userLocation.longitude });
-                bounds.extend(destinationPos);
-                map.fitBounds(bounds, { padding: 50 });
-              }
-            }
+        const distance = mapRef.current!.getSource('route') ? 0 : 
+          Math.sqrt(
+            Math.pow((destCoords[0] - userLocation.longitude) * 111320 * Math.cos(userLocation.latitude * Math.PI / 180), 2) +
+            Math.pow((destCoords[1] - userLocation.latitude) * 110540, 2)
           );
-        }
-      });
-      return;
-    }
-    
-    directionsService.route(
-      {
-        origin: routeOrigin,
-        destination: routeDestination,
-        travelMode: window.google.maps.TravelMode.DRIVING,
-      },
-      (result, status) => {
-        if (status === 'OK' && result) {
-          directionsRenderer.setDirections(result);
-          // Only fit bounds on first load, not on updates
-          if (!map.getBounds()) {
-            const bounds = new window.google.maps.LatLngBounds();
-            bounds.extend(routeOrigin);
-            bounds.extend(routeDestination);
-            map.fitBounds(bounds, { padding: 50 });
+        
+        const routeResponse = await fetch(
+          `https://api.mapbox.com/directions/v5/mapbox/driving/${userLocation.longitude},${userLocation.latitude};${destCoords[0]},${destCoords[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
+        );
+        const routeData = await routeResponse.json();
+        if (routeData.routes?.[0]) {
+          const route = routeData.routes[0].geometry;
+          const distanceKm = routeData.routes[0].distance / 1000;
+          const distanceText = distanceKm >= 1 ? `${distanceKm.toFixed(1)} km` : `${Math.round(routeData.routes[0].distance)} m`;
+          
+          // Add distance label
+          if (distanceLabelRef.current) {
+            distanceLabelRef.current.remove();
+          }
+          const labelEl = document.createElement('div');
+          labelEl.style.cssText = 'background:#ff7b29;color:white;padding:4px 8px;border-radius:4px;font-weight:bold;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.2)';
+          labelEl.textContent = distanceText;
+          distanceLabelRef.current = new mapboxgl.Marker({ element: labelEl, anchor: 'bottom' })
+            .setLngLat([destCoords[0], destCoords[1] + 0.001] as [number, number])
+            .addTo(mapRef.current!);
+          
+          if (mapRef.current!.getSource('route')) {
+            (mapRef.current!.getSource('route') as mapboxgl.GeoJSONSource).setData(route);
+          } else {
+            mapRef.current!.addSource('route', { type: 'geojson', data: route });
+            mapRef.current!.addLayer({
+              id: 'route',
+              type: 'line',
+              source: 'route',
+              paint: { 'line-color': '#f97316', 'line-width': 6, 'line-opacity': 0.9 }
+            });
           }
         }
       }
-    );
-  }, [map, userLocation, driverLocation, showRoute, directionsRenderer, routePhase, destination]);
+    };
+    getRoute();
+  }, [userLocation, destination, isDriver]);
 
-  // Handle map resize when bottom sheet changes (without re-fitting bounds)
+  // Draw route based on phase
   useEffect(() => {
-    if (map) {
-      setTimeout(() => {
-        window.google.maps.event.trigger(map, 'resize');
-      }, 300);
-    }
-  }, [isMinimized, map]);
+    if (!mapRef.current || !userLocation || !driverLocation || !showRoute) return;
 
-  if (!isLoaded) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-towapp-orange border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-          <p className="text-gray-600">Loading map...</p>
-        </div>
-      </div>
-    );
-  }
+    const getRoute = async () => {
+      let start, end;
+      if (routePhase === 'pickup') {
+        start = [driverLocation.longitude, driverLocation.latitude];
+        end = [userLocation.longitude, userLocation.latitude];
+      } else {
+        if (!destination) return;
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(destination)}.json?access_token=${mapboxgl.accessToken}`
+        );
+        const data = await response.json();
+        if (!data.features?.[0]) return;
+        start = [userLocation.longitude, userLocation.latitude];
+        end = data.features[0].center;
+      }
+      
+      const routeResponse = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
+      );
+      const routeData = await routeResponse.json();
+      if (routeData.routes?.[0]) {
+        const route = routeData.routes[0].geometry;
+        if (mapRef.current!.getSource('active-route')) {
+          (mapRef.current!.getSource('active-route') as mapboxgl.GeoJSONSource).setData(route);
+        } else {
+          mapRef.current!.addSource('active-route', { type: 'geojson', data: route });
+          mapRef.current!.addLayer({
+            id: 'active-route',
+            type: 'line',
+            source: 'active-route',
+            paint: { 'line-color': '#f97316', 'line-width': 6 }
+          });
+        }
+      }
+    };
+    getRoute();
+  }, [userLocation, driverLocation, showRoute, routePhase, destination]);
+
+  // Handle map resize
+  useEffect(() => {
+    if (mapRef.current) {
+      setTimeout(() => mapRef.current?.resize(), 300);
+    }
+  }, [isMinimized]);
 
   return (
-    <div 
-      ref={mapRef} 
-      data-map
-      className="w-full h-full relative bg-gray-200" 
-      style={{ 
-        pointerEvents: 'auto',
-        zIndex: 1
-      }}
-    >
-      {/* Fallback for when Google Maps fails to load */}
-      <div className="absolute inset-0 flex items-center justify-center bg-gray-100" style={{ zIndex: -1 }}>
-        <p className="text-gray-600">Map loading...</p>
-      </div>
-    </div>
+    <>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+          50% { transform: translate(-50%, -50%) scale(2); opacity: 0.2; }
+        }
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+      `}</style>
+      <div ref={mapContainerRef} className="w-full h-full" />
+    </>
   );
 }
