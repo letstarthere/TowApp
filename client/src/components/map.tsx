@@ -40,6 +40,7 @@ export default function Map({
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const destinationMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const demoTrucksRef = useRef<{ marker: mapboxgl.Marker; position: [number, number]; direction: number }[]>([]);
+  const routeDrawnRef = useRef(false);
 
   // Initialize Mapbox
   useEffect(() => {
@@ -155,9 +156,12 @@ export default function Map({
 
       truckPositions.forEach((pos) => {
         const el = document.createElement('img');
-        el.src = '/attached_assets/yellow-tow-truck-icon.png';
-        el.style.cssText = 'width:40px;height:40px;object-fit:contain;transition:all 0.5s linear';
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        el.src = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png';
+        el.style.cssText = 'width:25px;height:41px;object-fit:contain;transition:all 0.5s linear';
+        el.onerror = () => {
+          el.src = '/attached_assets/yellow-tow-truck-icon.png';
+        };
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
           .setLngLat(pos)
           .addTo(mapRef.current!);
         demoTrucksRef.current.push({ marker, position: pos, direction: Math.random() * 360 });
@@ -181,7 +185,7 @@ export default function Map({
 
   // Draw route to destination with geocoding
   useEffect(() => {
-    if (!mapRef.current || !userLocation || isDriver || !destination) return;
+    if (!mapRef.current || !userLocation || isDriver || !destination || routeDrawnRef.current) return;
 
     const getRoute = async () => {
       try {
@@ -224,13 +228,14 @@ export default function Map({
           bounds.extend([userLocation.longitude, userLocation.latitude]);
           bounds.extend(destCoords as [number, number]);
           mapRef.current!.fitBounds(bounds, { padding: 80, duration: 1500 });
+          routeDrawnRef.current = true;
         }
       } catch (error) {
         console.error('Route error:', error);
       }
     };
     getRoute();
-  }, [userLocation, destination, isDriver]);
+  }, [center?.lat, isDriver]);
 
   // Draw route based on phase
   useEffect(() => {

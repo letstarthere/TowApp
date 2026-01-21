@@ -669,7 +669,7 @@ export default function UserMap() {
     setDropoffLocation(location);
     setCurrentView('trucks');
     setDragHeight(80);
-    setMapKey(prev => prev + 1);
+    setTimeout(() => setMapKey(prev => prev + 1), 100);
   };
 
   const handleDriverSelect = (driver: MockDriver) => {
