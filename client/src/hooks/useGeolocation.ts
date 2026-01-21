@@ -12,17 +12,17 @@ export function useGeolocation() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fallbackLocation = {
-      latitude: -26.2041,
-      longitude: 28.0473
-    };
-
     const getLocation = async () => {
       try {
+        const permissions = await Geolocation.checkPermissions();
+        if (permissions.location !== 'granted') {
+          await Geolocation.requestPermissions();
+        }
+
         const position = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: false,
-          timeout: 10000,
-          maximumAge: 60000
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
         });
         
         setLocation({
@@ -33,9 +33,9 @@ export function useGeolocation() {
         setIsLoading(false);
 
         const watchId = await Geolocation.watchPosition({
-          enableHighAccuracy: false,
-          timeout: 10000,
-          maximumAge: 60000
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
         }, (position) => {
           if (position) {
             setLocation({
@@ -50,7 +50,10 @@ export function useGeolocation() {
         };
       } catch (err) {
         console.error('Geolocation error:', err);
-        setLocation(fallbackLocation);
+        setLocation({
+          latitude: -26.2041,
+          longitude: 28.0473
+        });
         setError(null);
         setIsLoading(false);
       }

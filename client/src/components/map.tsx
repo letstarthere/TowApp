@@ -45,14 +45,13 @@ export default function Map({
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const defaultCenter = userLocation ? [userLocation.longitude, userLocation.latitude] : 
-      center ? [center.lng, center.lat] : [28.0473, -26.2041];
+    const defaultCenter = userLocation ? [userLocation.longitude, userLocation.latitude] : [28.0473, -26.2041];
 
     mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: 'mapbox://styles/mapbox/streets-v12',
       center: defaultCenter as [number, number],
-      zoom: 13,
+      zoom: 15,
       attributionControl: false
     });
     
@@ -63,14 +62,14 @@ export default function Map({
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [userLocation]);
 
   // Center on user location
   useEffect(() => {
     if (mapRef.current && userLocation) {
       mapRef.current.flyTo({
         center: [userLocation.longitude, userLocation.latitude],
-        zoom: 13,
+        zoom: 15,
         duration: 1000
       });
     }
@@ -146,16 +145,18 @@ export default function Map({
 
     if (demoTrucksRef.current.length === 0) {
       const truckPositions: [number, number][] = [
-        [userLocation.longitude + 0.01, userLocation.latitude + 0.01],
-        [userLocation.longitude - 0.01, userLocation.latitude - 0.01],
-        [userLocation.longitude + 0.015, userLocation.latitude - 0.005],
-        [userLocation.longitude - 0.008, userLocation.latitude + 0.012]
+        [userLocation.longitude + 0.002, userLocation.latitude + 0.002],
+        [userLocation.longitude - 0.002, userLocation.latitude - 0.002],
+        [userLocation.longitude + 0.003, userLocation.latitude - 0.001],
+        [userLocation.longitude - 0.001, userLocation.latitude + 0.003],
+        [userLocation.longitude + 0.0015, userLocation.latitude + 0.0015],
+        [userLocation.longitude - 0.0025, userLocation.latitude + 0.001]
       ];
 
       truckPositions.forEach((pos) => {
         const el = document.createElement('div');
-        el.style.cssText = 'width:32px;height:32px;background-image:url(/attached_assets/yellow-tow-truck-icon.png);background-size:cover;transition:transform 0.5s linear';
-        const marker = new mapboxgl.Marker({ element: el, rotationAlignment: 'map' })
+        el.style.cssText = 'width:40px;height:40px;background-image:url(/attached_assets/yellow-tow-truck-icon.png);background-size:contain;background-repeat:no-repeat;transition:all 0.5s linear';
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat(pos)
           .addTo(mapRef.current!);
         demoTrucksRef.current.push({ marker, position: pos, direction: Math.random() * 360 });
@@ -164,8 +165,8 @@ export default function Map({
 
     const interval = setInterval(() => {
       demoTrucksRef.current.forEach(truck => {
-        const speed = 0.0001;
-        truck.direction += (Math.random() - 0.5) * 20;
+        const speed = 0.00005;
+        truck.direction += (Math.random() - 0.5) * 30;
         const rad = (truck.direction * Math.PI) / 180;
         truck.position[0] += Math.cos(rad) * speed;
         truck.position[1] += Math.sin(rad) * speed;

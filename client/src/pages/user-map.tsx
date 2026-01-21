@@ -105,37 +105,18 @@ export default function UserMap() {
     }
   });
 
-  // Load Google Maps and initialize autocomplete
+  // Load Google Maps for autocomplete
   useEffect(() => {
-    const loadGoogleMaps = async () => {
-      if (window.google?.maps?.places) {
-        initAutocomplete();
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/config/maps');
-        const config = await response.json();
-        
-        if (!config.apiKey) return;
-        
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${config.apiKey}&libraries=places`;
-        script.async = true;
-        script.onload = () => initAutocomplete();
-        document.head.appendChild(script);
-      } catch (error) {
-        console.error('Failed to load Google Maps:', error);
-      }
-    };
-    
-    const initAutocomplete = () => {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyAgl6sJeKZ83uP9iD8kv5WXqka629pZ2bA&libraries=places`;
+    script.async = true;
+    script.onload = () => {
       if (window.google?.maps?.places && dropoffInputRef.current && !autocomplete) {
         const autocompleteInstance = new window.google.maps.places.Autocomplete(
           dropoffInputRef.current,
           {
             componentRestrictions: { country: 'za' },
-            fields: ['place_id', 'geometry', 'name', 'formatted_address']
+            fields: ['formatted_address']
           }
         );
         
@@ -149,8 +130,7 @@ export default function UserMap() {
         setAutocomplete(autocompleteInstance);
       }
     };
-    
-    loadGoogleMaps();
+    document.head.appendChild(script);
   }, [autocomplete]);
 
   // Load service selection from localStorage
