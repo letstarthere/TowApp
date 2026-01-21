@@ -858,6 +858,23 @@ export default function UserMap() {
 
   return (
     <>
+      {/* DEV NAVIGATION PANEL */}
+      <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white z-[100] p-2 shadow-lg">
+        <div className="flex gap-2 overflow-x-auto text-xs">
+          <button onClick={() => { setCurrentView('car'); setShowCarDetails(false); setDragHeight(50); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">Car Select</button>
+          <button onClick={() => { setCurrentView('car'); setShowCarDetails(true); setSelectedCar('current'); setDragHeight(80); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">Car Details</button>
+          <button onClick={() => { setCurrentView('location'); setDragHeight(40); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">Location</button>
+          <button onClick={() => { setCurrentView('trucks'); setDragHeight(80); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">Trucks</button>
+          <button onClick={() => { setCurrentView('confirm'); setSelectedDriver(standardDrivers[0]); setDragHeight(80); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">Confirm</button>
+          <button onClick={() => { setIsSearching(true); setDragHeight(40); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">Searching</button>
+          <button onClick={() => { setIsSearching(false); setDriverAccepted(true); setAssignedDriver({ id: 1, name: 'Sean Bampoe', vehicleType: 'Flatbed', licensePlate: 'GT-1234-GP', rating: 4.8, phone: '+27123456700', currentLatitude: -25.7483, currentLongitude: 28.2299 }); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">Driver On Way</button>
+          <button onClick={() => { setDriverArrived(true); setTowingInProgress(true); setDragHeight(80); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">Towing</button>
+          <button onClick={() => { setTowingInProgress(false); setDrivingToDestination(true); setDragHeight(40); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">To Destination</button>
+          <button onClick={() => { setDestinationArrived(true); setDragHeight(80); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">Arrived</button>
+          <button onClick={() => { setServiceCompleted(true); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">Completed</button>
+          <button onClick={() => { setCarPhotos({ 'Front': 'skip', 'Back': 'skip', 'Left Side': 'skip', 'Right Side': 'skip' }); }} className="px-3 py-1 bg-green-700 rounded whitespace-nowrap">Skip Photos</button>
+        </div>
+      </div>
       {/* Road Assistance Concluded - Full Screen */}
       {serviceCompleted ? (
         <RoadAssistanceConcluded
@@ -891,7 +908,7 @@ export default function UserMap() {
       ) : (
         <div className="min-h-screen bg-white relative">
         {/* Map Container */}
-        <div className={`relative transition-all duration-300 ${isMinimized ? 'h-[calc(100vh-5rem)]' : 'h-[60vh]'}`}>
+        <div className={`relative transition-all duration-300 ${isMinimized ? 'h-[calc(100vh-5rem)]' : 'h-[60vh]'} mt-10`}>
           <Map
             key={mapKey}
             center={location ? { lat: location.latitude, lng: location.longitude } : undefined}
