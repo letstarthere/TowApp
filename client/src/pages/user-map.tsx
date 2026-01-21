@@ -69,6 +69,7 @@ export default function UserMap() {
   const [startHeight, setStartHeight] = useState(40);
   const dropoffInputRef = useRef<HTMLInputElement>(null);
   const [autocomplete, setAutocomplete] = useState<any>(null);
+  const [mapKey, setMapKey] = useState(0);
   
   const { user } = useAuth();
   const { location, error: locationError } = useGeolocation();
@@ -892,6 +893,7 @@ export default function UserMap() {
         {/* Map Container */}
         <div className={`relative transition-all duration-300 ${isMinimized ? 'h-[calc(100vh-5rem)]' : 'h-[60vh]'}`}>
           <Map
+            key={mapKey}
             center={location ? { lat: location.latitude, lng: location.longitude } : undefined}
             drivers={[]}
             userLocation={location}
@@ -928,16 +930,8 @@ export default function UserMap() {
               size="icon"
               className="w-12 h-12 bg-orange-500 rounded-full shadow-lg hover:bg-orange-600"
               onClick={() => {
-                if (location && map) {
-                  // Re-center map to user location
-                  const userPos = { lat: location.latitude, lng: location.longitude };
-                  if (window.google?.maps) {
-                    const mapInstance = document.querySelector('[data-map]');
-                    if (mapInstance) {
-                      window.google.maps.event.trigger(mapInstance, 'resize');
-                    }
-                  }
-                  window.location.reload();
+                if (location) {
+                  setMapKey(prev => prev + 1);
                 }
               }}
             >
@@ -948,7 +942,7 @@ export default function UserMap() {
         
         {/* Bottom Sheet */}
         <div 
-          className={`fixed left-0 right-0 shadow-2xl transition-all duration-500 ease-out z-50 overflow-hidden ${
+          className={`fixed left-0 right-0 shadow-2xl transition-all duration-500 ease-out z-50 overflow-hidden border-t-4 border-gray-200 ${
             isBottomSheetVisible ? 'translate-y-0' : 'translate-y-full'
           }`}
           style={{ 
@@ -963,7 +957,7 @@ export default function UserMap() {
           {/* Drag Handle - only show when not on initial car view */}
           {!isSearching && !towingInProgress && currentView !== 'car' && (
             <div 
-              className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-4 cursor-grab active:cursor-grabbing hover:bg-gray-400 transition-colors"
+              className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-6 cursor-grab active:cursor-grabbing hover:bg-gray-400 transition-colors"
               onMouseDown={handleDragStart}
               onTouchStart={handleDragStart}
               onTouchMove={handleDragMove}
@@ -1020,7 +1014,7 @@ export default function UserMap() {
             </div>
           ) : isMinimized ? (
             <div className="px-6 pb-6 h-full flex flex-col">
-              <div className="mb-6">
+              <div className="mb-6 mt-4">
                 {currentView === 'car' && (
                   <h3 className="font-bold text-black text-lg">Vehicle Information</h3>
                 )}
@@ -1161,7 +1155,7 @@ export default function UserMap() {
                 currentView === 'car' ? 'translate-y-0' : 'translate-y-full'
               }`}>
                 <div className="px-6 pb-6 h-full flex flex-col">
-                  <div className="flex items-center mb-6">
+                  <div className="flex items-center mb-6 mt-4">
                     {showCarDetails && (
                       <Button
                         variant="ghost"
@@ -1398,7 +1392,7 @@ export default function UserMap() {
                 currentView === 'location' ? 'translate-y-0' : 'translate-y-full'
               }`}>
                 <div className="px-6 pb-6 h-full flex flex-col">
-                  <h3 className="font-bold text-black mb-6 text-lg">Where should the vehicle be taken?</h3>
+                  <h3 className="font-bold text-black mb-6 mt-4 text-lg">Where should the vehicle be taken?</h3>
                   
                   <div className="mb-4 relative">
                     <Input
@@ -1436,7 +1430,7 @@ export default function UserMap() {
                 currentView === 'trucks' ? 'translate-y-0' : currentView === 'location' ? 'translate-y-full' : '-translate-y-full'
               }`}>
                 <div className="px-6 pb-6 h-full overflow-hidden flex flex-col">
-                  <div className="flex items-center mb-6">
+                  <div className="flex items-center mb-6 mt-4">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1532,7 +1526,7 @@ export default function UserMap() {
                 currentView === 'confirm' ? 'translate-y-0' : 'translate-y-full'
               }`}>
                 <div className="px-6 pb-6 h-full flex flex-col">
-                  <div className="flex items-center mb-6">
+                  <div className="flex items-center mb-6 mt-4">
                     <Button
                       variant="ghost"
                       size="sm"
