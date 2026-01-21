@@ -930,7 +930,9 @@ export default function UserMap() {
           </div>
           
           {/* Location Button */}
-          <div className="absolute bottom-[calc(70vh+2rem)] right-4 z-10">
+          <div className={`absolute right-4 z-10 transition-all duration-300 ${
+            currentView === 'car' && !showCarDetails ? 'bottom-[calc(50vh-3rem)]' : 'bottom-[calc(60vh-3rem)]'
+          }`}>
             <Button
               variant="ghost"
               size="icon"
@@ -1209,7 +1211,7 @@ export default function UserMap() {
                   </div>
                   
                   {!showCarDetails && (
-                    <div className="space-y-4 mb-6">
+                    <div className="space-y-4 mb-6 overflow-y-auto flex-1">
                       <div 
                         className={`p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-all duration-300 ${
                           selectedCar === 'current' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'

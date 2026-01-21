@@ -46,6 +46,8 @@ export default function Map({
   const [directionsRenderer, setDirectionsRenderer] = useState<any>(null);
   const [destinationMarker, setDestinationMarker] = useState<any>(null);
   const [distanceLabel, setDistanceLabel] = useState<any>(null);
+  const userMarkerRef = useRef<any>(null);
+  const pulseCircleRef = useRef<any>(null);
 
   // Load Google Maps script
   useEffect(() => {
@@ -139,27 +141,65 @@ export default function Map({
   useEffect(() => {
     if (!map || !window.google) return;
 
-    // Clear existing markers
+    // Clear existing markers (except user marker)
     markers.forEach(marker => marker.setMap(null));
     const newMarkers: any[] = [];
 
-    // Add user location marker
+    // Add or update user location marker with pulsing animation
     if (userLocation) {
-      const userMarker = new window.google.maps.Marker({
-        position: { lat: userLocation.latitude, lng: userLocation.longitude },
-        map: map,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 12,
-          fillColor: '#f97316', // Orange color
-          fillOpacity: 1,
-          strokeColor: 'white',
-          strokeWeight: 3,
-        },
-        title: 'Your location',
-        zIndex: 1000
-      });
-      newMarkers.push(userMarker);
+      if (!userMarkerRef.current) {
+        // Create static user marker
+        userMarkerRef.current = new window.google.maps.Marker({
+          position: { lat: userLocation.latitude, lng: userLocation.longitude },
+          map: map,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: '#f97316',
+            fillOpacity: 1,
+            strokeColor: 'white',
+            strokeWeight: 3,
+          },
+          title: 'Your location',
+          zIndex: 1000,
+          optimized: false
+        });
+
+        // Create pulsing circle
+        pulseCircleRef.current = new window.google.maps.Circle({
+          map: map,
+          center: { lat: userLocation.latitude, lng: userLocation.longitude },
+          radius: 50,
+          strokeColor: '#f97316',
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: '#f97316',
+          fillOpacity: 0.2,
+          zIndex: 999
+        });
+
+        // Animate pulse
+        let growing = true;
+        let radius = 50;
+        setInterval(() => {
+          if (growing) {
+            radius += 2;
+            if (radius >= 100) growing = false;
+          } else {
+            radius -= 2;
+            if (radius <= 50) growing = true;
+          }
+          if (pulseCircleRef.current) {
+            pulseCircleRef.current.setRadius(radius);
+          }
+        }, 50);
+      } else {
+        // Update position without recreating
+        userMarkerRef.current.setPosition({ lat: userLocation.latitude, lng: userLocation.longitude });
+        if (pulseCircleRef.current) {
+          pulseCircleRef.current.setCenter({ lat: userLocation.latitude, lng: userLocation.longitude });
+        }
+      }
     }
 
     // Add driver location marker when showing route
@@ -237,7 +277,7 @@ export default function Map({
     }
 
     setMarkers(newMarkers);
-  }, [map, drivers, userLocation, isDriver, requests, onDriverClick]);
+  }, [map, drivers, userLocation, isDriver, requests, onDriverClick, driverLocation, showRoute]);
 
   // Draw directions to destination (only once)
   useEffect(() => {
