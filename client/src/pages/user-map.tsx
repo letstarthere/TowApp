@@ -957,8 +957,8 @@ export default function UserMap() {
             isBottomSheetVisible ? 'translate-y-0' : 'translate-y-full'
           }`}
           style={{ 
-            bottom: !isSearching && !towingInProgress && !driverAccepted && !drivingToDestination && !destinationArrived ? '4rem' : 0,
-            height: !isSearching && !towingInProgress && !driverAccepted && !drivingToDestination && !destinationArrived ? `calc(${dragHeight}vh - 4rem)` : `${dragHeight}vh`,
+            bottom: 0,
+            height: `${dragHeight}vh`,
             transform: isDragging ? 'none' : undefined,
             background: 'white',
             borderTopLeftRadius: '1.5rem',
@@ -1022,13 +1022,13 @@ export default function UserMap() {
               </p>
             </div>
           ) : isMinimized ? (
-            <div className="px-6 pb-6 h-full flex flex-col">
+            <div className="px-6 h-full flex flex-col">
               {currentView === 'car' && (
                 <>
                   <div className="mb-4 mt-4">
                     <h3 className="font-bold text-black text-lg">Hey there, need help?</h3>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-4 flex-1">
                     <div 
                       className={`p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-all duration-300 ${
                         selectedCar === 'current' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'
@@ -1183,6 +1183,37 @@ export default function UserMap() {
                   </div>
                 </div>
               )}
+              
+              {/* Integrated Navigation */}
+              <div className="border-t border-gray-200 mt-auto pt-3">
+                <div className="flex items-center justify-around">
+                  <button
+                    onClick={() => {
+                      setCurrentView('car');
+                      setShowCarDetails(false);
+                      setDragHeight(50);
+                    }}
+                    className="flex flex-col items-center space-y-1"
+                  >
+                    <Home className={`w-6 h-6 ${currentView === 'car' && !showCarDetails ? 'text-orange-500' : 'text-gray-400'}`} />
+                    <span className={`text-xs ${currentView === 'car' && !showCarDetails ? 'text-orange-500 font-semibold' : 'text-gray-600'}`}>Home</span>
+                  </button>
+                  <button
+                    onClick={() => setLocation('/trip-history')}
+                    className="flex flex-col items-center space-y-1"
+                  >
+                    <History className="w-6 h-6 text-gray-400" />
+                    <span className="text-xs text-gray-600">Trips</span>
+                  </button>
+                  <button
+                    onClick={() => setLocation('/user-profile')}
+                    className="flex flex-col items-center space-y-1"
+                  >
+                    <User className="w-6 h-6 text-gray-400" />
+                    <span className="text-xs text-gray-600">Profile</span>
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="relative overflow-hidden h-full">
@@ -1911,40 +1942,7 @@ export default function UserMap() {
         </div>
       )}
 
-      {/* Bottom Navigation Bar */}
-      {!isSearching && !driverAccepted && !towingInProgress && !drivingToDestination && !destinationArrived && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-[40] safe-area-bottom">
-          <div className="flex items-center justify-around py-3 px-6">
-            <button
-              onClick={() => {
-                setCurrentView('car');
-                setShowCarDetails(false);
-                setDragHeight(50);
-              }}
-              className="flex flex-col items-center space-y-1"
-            >
-              <Home className={`w-6 h-6 ${currentView === 'car' && !showCarDetails ? 'text-orange-500' : 'text-gray-400'}`} />
-              <span className={`text-xs ${currentView === 'car' && !showCarDetails ? 'text-orange-500 font-semibold' : 'text-gray-600'}`}>Home</span>
-            </button>
-            
-            <button
-              onClick={() => setLocation('/trip-history')}
-              className="flex flex-col items-center space-y-1"
-            >
-              <History className="w-6 h-6 text-gray-400" />
-              <span className="text-xs text-gray-600">Trips</span>
-            </button>
-            
-            <button
-              onClick={() => setLocation('/user-profile')}
-              className="flex flex-col items-center space-y-1"
-            >
-              <User className="w-6 h-6 text-gray-400" />
-              <span className="text-xs text-gray-600">Profile</span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Bottom Navigation Bar - Removed, integrated into bottom sheet */}
     </>
   );
 }

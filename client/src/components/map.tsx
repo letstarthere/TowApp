@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { DriverWithUser, RequestWithDetails } from "@/lib/types";
+import yellowTowTruckIcon from "../../../attached_assets/yellow-tow-truck-icon.png";
 
 mapboxgl.accessToken = 'pk.eyJ1Ijoic2VhbmJhbXBvZS0xMjMiLCJhIjoiY21rbnkzNWZ3MDBrYjNscW4yNGJsbHBxYiJ9.BJHCl5yY8vUv_1lwOgMjuA';
 
@@ -111,7 +112,7 @@ export default function Map({
     // Driver location marker
     if (driverLocation && showRoute) {
       const el = document.createElement('img');
-      el.src = '/attached_assets/yellow-tow-truck-icon.png';
+      el.src = yellowTowTruckIcon;
       el.style.cssText = 'width:48px;height:48px;object-fit:contain';
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([driverLocation.longitude, driverLocation.latitude])
@@ -124,7 +125,7 @@ export default function Map({
       drivers.forEach(driver => {
         if (driver.currentLatitude && driver.currentLongitude) {
           const el = document.createElement('img');
-          el.src = '/attached_assets/yellow-tow-truck-icon.png';
+          el.src = yellowTowTruckIcon;
           el.style.cssText = 'width:32px;height:32px;object-fit:contain;cursor:pointer';
           el.onclick = () => onDriverClick?.(driver);
           const marker = new mapboxgl.Marker({ element: el })
@@ -164,7 +165,7 @@ export default function Map({
 
       truckPositions.forEach((pos) => {
         const el = document.createElement('img');
-        el.src = '/attached_assets/yellow-tow-truck-icon.png';
+        el.src = yellowTowTruckIcon;
         el.style.cssText = 'width:40px;height:40px;object-fit:contain;transition:all 0.5s linear';
         const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat(pos)

@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import userProfileImage from "../../../attached_assets/user_profile_image.png";
 
 export default function UserProfile() {
   const [, setLocation] = useLocation();
@@ -35,7 +36,7 @@ export default function UserProfile() {
           <div className="relative w-20 h-20 mx-auto mb-4">
             <div className="w-20 h-20 bg-gray-200 rounded-full overflow-hidden">
               <img 
-                src="/attached_assets/user_profile_image.png" 
+                src={userProfileImage} 
                 alt="Profile" 
                 className="w-full h-full object-cover"
               />
