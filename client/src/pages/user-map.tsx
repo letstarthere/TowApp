@@ -1913,7 +1913,7 @@ export default function UserMap() {
 
       {/* Bottom Navigation Bar */}
       {!isSearching && !driverAccepted && !towingInProgress && !drivingToDestination && !destinationArrived && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-[70] safe-area-bottom">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-[40] safe-area-bottom">
           <div className="flex items-center justify-around py-3 px-6">
             <button
               onClick={() => {

@@ -12,16 +12,24 @@ export function useGeolocation() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let watchId: string;
+    let retryTimeout: NodeJS.Timeout;
+
     const getLocation = async () => {
       try {
         const permissions = await Geolocation.checkPermissions();
         if (permissions.location !== 'granted') {
-          await Geolocation.requestPermissions();
+          const result = await Geolocation.requestPermissions();
+          if (result.location !== 'granted') {
+            setError('Location permission denied');
+            setIsLoading(false);
+            return;
+          }
         }
 
         const position = await Geolocation.getCurrentPosition({
           enableHighAccuracy: true,
-          timeout: 5000,
+          timeout: 10000,
           maximumAge: 0
         });
         
@@ -32,9 +40,9 @@ export function useGeolocation() {
         setError(null);
         setIsLoading(false);
 
-        const watchId = await Geolocation.watchPosition({
+        watchId = await Geolocation.watchPosition({
           enableHighAccuracy: true,
-          timeout: 5000,
+          timeout: 10000,
           maximumAge: 0
         }, (position) => {
           if (position) {
@@ -42,20 +50,23 @@ export function useGeolocation() {
               latitude: position.coords.latitude,
               longitude: position.coords.longitude,
             });
+            setError(null);
           }
         });
-
-        return () => {
-          Geolocation.clearWatch({ id: watchId });
-        };
       } catch (err) {
         console.error('Geolocation error:', err);
         setError('Unable to get location');
         setIsLoading(false);
+        retryTimeout = setTimeout(() => getLocation(), 3000);
       }
     };
 
     getLocation();
+
+    return () => {
+      if (watchId) Geolocation.clearWatch({ id: watchId });
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
   }, []);
 
   return { location, error, isLoading };
