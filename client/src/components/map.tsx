@@ -55,7 +55,11 @@ export default function Map({
       style: 'mapbox://styles/mapbox/streets-v12',
       center: defaultCenter as [number, number],
       zoom: 15,
-      attributionControl: false
+      attributionControl: false,
+      scrollZoom: false,
+      dragPan: false,
+      touchZoomRotate: false,
+      doubleClickZoom: false
     });
     
     mapRef.current.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
@@ -106,8 +110,9 @@ export default function Map({
 
     // Driver location marker
     if (driverLocation && showRoute) {
-      const el = document.createElement('div');
-      el.style.cssText = 'width:48px;height:48px;background-image:url(/attached_assets/yellow-tow-truck-icon.png);background-size:cover';
+      const el = document.createElement('img');
+      el.src = '/attached_assets/yellow-tow-truck-icon.png';
+      el.style.cssText = 'width:48px;height:48px;object-fit:contain';
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([driverLocation.longitude, driverLocation.latitude])
         .addTo(mapRef.current);
@@ -118,8 +123,9 @@ export default function Map({
     if (!isDriver) {
       drivers.forEach(driver => {
         if (driver.currentLatitude && driver.currentLongitude) {
-          const el = document.createElement('div');
-          el.style.cssText = 'width:32px;height:32px;background-image:url(/shared/assets/yellow-tow-truck-icon.png);background-size:cover;cursor:pointer';
+          const el = document.createElement('img');
+          el.src = '/attached_assets/yellow-tow-truck-icon.png';
+          el.style.cssText = 'width:32px;height:32px;object-fit:contain;cursor:pointer';
           el.onclick = () => onDriverClick?.(driver);
           const marker = new mapboxgl.Marker({ element: el })
             .setLngLat([parseFloat(driver.currentLongitude.toString()), parseFloat(driver.currentLatitude.toString())])

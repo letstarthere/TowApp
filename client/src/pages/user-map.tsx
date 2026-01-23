@@ -922,18 +922,20 @@ export default function UserMap() {
           }`}>
             {/* Menu Icon */}
             <div className="transition-all duration-500 ease-in-out bg-white shadow-lg flex items-center cursor-pointer w-10 h-10 rounded-full overflow-hidden" onClick={handleMenuClick}>
-              <img 
-                src="/attached_assets/user_profile_image.png" 
-                alt="Profile" 
-                className="w-full h-full object-cover"
-              />
+              <svg className="w-6 h-6 text-gray-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
             </div>
           </div>
           
           {/* Location Button */}
           <div className={`absolute right-4 z-10 transition-all duration-300 ${
-            currentView === 'car' && !showCarDetails ? 'bottom-[calc(50vh-3rem)]' : 'bottom-[calc(60vh-3rem)]'
-          }`}>
+            dragHeight >= 70 ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+            style={{
+              bottom: `calc(${dragHeight}vh + 1rem)`
+            }}
+          >
             <Button
               variant="ghost"
               size="icon"
@@ -955,8 +957,8 @@ export default function UserMap() {
             isBottomSheetVisible ? 'translate-y-0' : 'translate-y-full'
           }`}
           style={{ 
-            bottom: 0, 
-            height: `${dragHeight}vh`,
+            bottom: !isSearching && !towingInProgress && !driverAccepted && !drivingToDestination && !destinationArrived ? '4rem' : 0,
+            height: !isSearching && !towingInProgress && !driverAccepted && !drivingToDestination && !destinationArrived ? `calc(${dragHeight}vh - 4rem)` : `${dragHeight}vh`,
             transform: isDragging ? 'none' : undefined,
             background: 'white',
             borderTopLeftRadius: '1.5rem',

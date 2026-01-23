@@ -50,11 +50,7 @@ export function useGeolocation() {
         };
       } catch (err) {
         console.error('Geolocation error:', err);
-        setLocation({
-          latitude: -26.2041,
-          longitude: 28.0473
-        });
-        setError(null);
+        setError('Unable to get location');
         setIsLoading(false);
       }
     };
