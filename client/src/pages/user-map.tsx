@@ -76,6 +76,7 @@ export default function UserMap() {
   const dropoffInputRef = useRef<HTMLInputElement>(null);
   const [autocomplete, setAutocomplete] = useState<any>(null);
   const [mapKey, setMapKey] = useState(0);
+  const [shouldDrawRoute, setShouldDrawRoute] = useState(false);
   
   const { user } = useAuth();
   const { location, error: locationError } = useGeolocation();
@@ -669,6 +670,7 @@ export default function UserMap() {
     setDropoffLocation(location);
     setCurrentView('trucks');
     setDragHeight(80);
+    setShouldDrawRoute(true);
     setTimeout(() => setMapKey(prev => prev + 1), 100);
   };
 
@@ -751,7 +753,7 @@ export default function UserMap() {
           // Start towing process after 10 more seconds
           setTimeout(() => {
             setTowingInProgress(true);
-            setDragHeight(80);
+            setDragHeight(50);
           }, 10000);
         }, 10000);
       }, 3000);
@@ -911,6 +913,7 @@ export default function UserMap() {
             } : undefined}
             showRoute={driverAccepted}
             routePhase={routePhase}
+            drawRoute={shouldDrawRoute}
           />
           
           {/* Top Navigation */}
@@ -918,18 +921,12 @@ export default function UserMap() {
             currentView === 'car' && showCarDetails && selectedCar === 'different' ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}>
             {/* Menu Icon */}
-            <div className="transition-all duration-500 ease-in-out bg-white shadow-lg flex items-center cursor-pointer w-10 h-10 rounded-full" onClick={handleMenuClick}>
-              <div className="w-full h-full flex items-center justify-center">
-                <img 
-                  src="/attached_assets/user_profile_image.png" 
-                  alt="Profile" 
-                  className="w-full h-full rounded-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = '<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>';
-                  }}
-                />
-              </div>
+            <div className="transition-all duration-500 ease-in-out bg-white shadow-lg flex items-center cursor-pointer w-10 h-10 rounded-full overflow-hidden" onClick={handleMenuClick}>
+              <img 
+                src="/attached_assets/user_profile_image.png" 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
           
@@ -986,15 +983,13 @@ export default function UserMap() {
               }}
             />
           ) : towingInProgress ? (
-            <div style={{ height: '50vh', pointerEvents: 'none' }}>
-              <TowingInProgress
-                onComplete={() => {
-                  setTowingInProgress(false);
-                  setDrivingToDestination(true);
-                  setDragHeight(40);
-                }}
-              />
-            </div>
+            <TowingInProgress
+              onComplete={() => {
+                setTowingInProgress(false);
+                setDrivingToDestination(true);
+                setDragHeight(40);
+              }}
+            />
           ) : drivingToDestination ? (
             <DrivingToDestination
               driver={assignedDriver}
