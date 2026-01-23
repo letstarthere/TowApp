@@ -55,7 +55,7 @@ export function useGeolocation() {
       } catch (err: any) {
         console.error('Geolocation error:', err);
         if (mounted) {
-          setLocation({ latitude: -26.2041, longitude: 28.0473 });
+          setLocation({ latitude: -25.7019, longitude: 28.2305 });
           setError(null);
           setIsLoading(false);
         }
