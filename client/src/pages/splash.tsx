@@ -11,20 +11,6 @@ export default function Splash() {
   useEffect(() => {
     if (isLoading) return;
     
-    const requestPermissions = async () => {
-      try {
-        const { Geolocation } = await import('@capacitor/geolocation');
-        const { Camera } = await import('@capacitor/camera');
-        
-        await Geolocation.requestPermissions();
-        await Camera.requestPermissions({ permissions: ['camera', 'photos'] });
-      } catch (error) {
-        console.log('Permission request:', error);
-      }
-    };
-    
-    requestPermissions();
-    
     const timer = setTimeout(() => {
       setFadeOut(true);
       
