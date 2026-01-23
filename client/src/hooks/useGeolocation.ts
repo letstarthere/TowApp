@@ -13,13 +13,19 @@ export function useGeolocation() {
 
   useEffect(() => {
     let watchId: string;
-    let retryTimeout: NodeJS.Timeout;
+    let retryInterval: NodeJS.Timeout;
+    let mounted = true;
 
     const getLocation = async () => {
+      if (!mounted) return;
+      
       try {
         const permissions = await Geolocation.checkPermissions();
+        console.log('Permission status:', permissions.location);
+        
         if (permissions.location !== 'granted') {
           const result = await Geolocation.requestPermissions();
+          console.log('Permission request result:', result.location);
           if (result.location !== 'granted') {
             setError('Location permission denied');
             setIsLoading(false);
@@ -29,23 +35,26 @@ export function useGeolocation() {
 
         const position = await Geolocation.getCurrentPosition({
           enableHighAccuracy: true,
-          timeout: 10000,
+          timeout: 15000,
           maximumAge: 0
         });
         
-        setLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-        setError(null);
-        setIsLoading(false);
+        if (mounted) {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          setError(null);
+          setIsLoading(false);
+          console.log('Location obtained:', position.coords.latitude, position.coords.longitude);
+        }
 
         watchId = await Geolocation.watchPosition({
           enableHighAccuracy: true,
-          timeout: 10000,
+          timeout: 15000,
           maximumAge: 0
         }, (position) => {
-          if (position) {
+          if (position && mounted) {
             setLocation({
               latitude: position.coords.latitude,
               longitude: position.coords.longitude,
@@ -53,19 +62,27 @@ export function useGeolocation() {
             setError(null);
           }
         });
-      } catch (err) {
+      } catch (err: any) {
         console.error('Geolocation error:', err);
-        setError('Unable to get location');
-        setIsLoading(false);
-        retryTimeout = setTimeout(() => getLocation(), 3000);
+        if (mounted) {
+          setError('Unable to get location');
+          setIsLoading(false);
+        }
       }
     };
 
     getLocation();
+    retryInterval = setInterval(() => {
+      if (!location && mounted) {
+        console.log('Retrying location...');
+        getLocation();
+      }
+    }, 5000);
 
     return () => {
+      mounted = false;
       if (watchId) Geolocation.clearWatch({ id: watchId });
-      if (retryTimeout) clearTimeout(retryTimeout);
+      if (retryInterval) clearInterval(retryInterval);
     };
   }, []);
 
