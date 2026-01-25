@@ -123,6 +123,15 @@ export default function UserMap() {
     return () => clearTimeout(timer);
   }, []);
   
+  // Request notification permission on mount
+  useEffect(() => {
+    const initNotifications = async () => {
+      await pushNotificationManager.initialize();
+      await pushNotificationManager.requestPermission();
+    };
+    initNotifications();
+  }, []);
+  
   // WebSocket connection
   useWebSocket(user?.id || 0, (message) => {
     if (message.type === 'request_accepted') {
@@ -771,8 +780,8 @@ export default function UserMap() {
         setDriverFound(false);
         setRoutePhase('pickup');
         
-        // Show notification that driver is on the way
-        pushNotificationManager.showLocalNotification({
+        pushNotificationManager.playNotificationSound();
+        pushNotificationManager.sendPushNotification({
           title: 'Driver On The Way',
           body: `${driver.name} is heading to your location. ETA: 8-12 min`,
           icon: '/assets/blackapplogo.png'
@@ -783,8 +792,7 @@ export default function UserMap() {
           setDriverArrived(true);
           setRoutePhase('delivery');
           
-          // Show notification that driver has arrived
-          pushNotificationManager.showLocalNotification({
+          pushNotificationManager.sendPushNotification({
             title: 'Driver Arrived',
             body: `${driver.name} has arrived at your location`,
             icon: '/assets/blackapplogo.png'

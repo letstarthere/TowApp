@@ -75,16 +75,21 @@ class PushNotificationManager {
     }
   }
 
-  // Show local notification (fallback when app is open)
-  showLocalNotification(payload: NotificationPayload): void {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(payload.title, {
+  // Send push notification (works when app is in background)
+  async sendPushNotification(payload: NotificationPayload): Promise<void> {
+    if (!this.registration) {
+      await this.initialize();
+    }
+    
+    if (this.registration && 'showNotification' in this.registration) {
+      await this.registration.showNotification(payload.title, {
         body: payload.body,
         icon: payload.icon || '/assets/blackapplogo.png',
         badge: payload.badge || '/assets/blackapplogo.png',
         tag: payload.tag,
         data: payload.data,
-        requireInteraction: true
+        requireInteraction: true,
+        vibrate: [200, 100, 200]
       });
     }
   }
