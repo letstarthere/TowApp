@@ -20,6 +20,7 @@ interface MapProps {
   showRoute?: boolean;
   routePhase?: 'pickup' | 'delivery';
   drawRoute?: boolean;
+  currentView?: string;
 }
 
 export default function Map({ 
@@ -35,15 +36,28 @@ export default function Map({
   driverLocation,
   showRoute = false,
   routePhase = 'pickup',
-  drawRoute = false
+  drawRoute = false,
+  currentView = 'car'
 }: MapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const destinationMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const demoTrucksRef = useRef<{ marker: mapboxgl.Marker; position: [number, number]; direction: number }[]>([]);
+  const staticTrucksRef = useRef<mapboxgl.Marker[]>([]);
   const routeDrawnRef = useRef(false);
+
+  const staticTruckLocations = [
+    { lat: -25.7479, lng: 28.1889 }, // Jofa Towing
+    { lat: -25.7156, lng: 28.1234 }, // xXx Towing
+    { lat: -25.7656, lng: 28.1978 }, // Precision Tow-in Service
+    { lat: -25.7823, lng: 28.3145 }, // Nyati Towing
+    { lat: -25.6789, lng: 28.1756 }, // Rieks Towing
+    { lat: -25.7912, lng: 28.3234 }, // LAR Roadside Assist
+    { lat: -25.6834, lng: 28.1823 }, // Brocon Towing
+    { lat: -25.6523, lng: 28.2456 }, // Route 66 Transport
+    { lat: -25.8456, lng: 28.1345 }  // Centow
+  ];
 
   // Initialize Mapbox
   useEffect(() => {
@@ -94,10 +108,10 @@ export default function Map({
       if (!userMarkerRef.current) {
         const el = document.createElement('div');
         el.className = 'user-marker';
-        el.style.cssText = 'width:16px;height:16px;background:#f97316;border:3px solid white;border-radius:50%;box-shadow:0 0 10px rgba(249,115,22,0.5)';
+        el.style.cssText = 'width:19px;height:19px;background:#f97316;border:3px solid white;border-radius:50%;box-shadow:0 0 10px rgba(249,115,22,0.5)';
         
         const pulse = document.createElement('div');
-        pulse.style.cssText = 'position:absolute;width:50px;height:50px;background:rgba(249,115,22,0.2);border:2px solid rgba(249,115,22,0.8);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);animation:pulse 2s infinite';
+        pulse.style.cssText = 'position:absolute;width:60px;height:60px;background:rgba(249,115,22,0.2);border:2px solid rgba(249,115,22,0.8);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);animation:pulse 2s infinite';
         el.appendChild(pulse);
         
         userMarkerRef.current = new mapboxgl.Marker({ element: el })
@@ -148,45 +162,46 @@ export default function Map({
     }
   }, [drivers, userLocation, isDriver, requests, onDriverClick, driverLocation, showRoute]);
 
-  // Demo moving tow trucks
+  // Static tow truck locations
   useEffect(() => {
     if (!mapRef.current || !userLocation || isDriver) return;
 
-    if (demoTrucksRef.current.length === 0) {
-      const truckPositions: [number, number][] = [
-        [userLocation.longitude + 0.002, userLocation.latitude + 0.002],
-        [userLocation.longitude - 0.002, userLocation.latitude - 0.002],
-        [userLocation.longitude + 0.003, userLocation.latitude - 0.001],
-        [userLocation.longitude - 0.001, userLocation.latitude + 0.003],
-        [userLocation.longitude + 0.0015, userLocation.latitude + 0.0015],
-        [userLocation.longitude - 0.0025, userLocation.latitude + 0.001]
-      ];
+    staticTrucksRef.current.forEach(m => m.remove());
+    staticTrucksRef.current = [];
 
-      truckPositions.forEach((pos) => {
-        const el = document.createElement('img');
-        el.src = yellowTowTruckIcon;
-        el.style.cssText = 'width:40px;height:40px;object-fit:contain;transition:all 0.5s linear';
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
-          .setLngLat(pos)
-          .addTo(mapRef.current!);
-        demoTrucksRef.current.push({ marker, position: pos, direction: Math.random() * 360 });
+    staticTruckLocations.forEach((loc) => {
+      const el = document.createElement('img');
+      el.src = yellowTowTruckIcon;
+      el.style.cssText = 'width:40px;height:40px;object-fit:contain';
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([loc.lng, loc.lat])
+        .addTo(mapRef.current!);
+      staticTrucksRef.current.push(marker);
+    });
+
+    return () => {
+      staticTrucksRef.current.forEach(m => m.remove());
+    };
+  }, [userLocation, isDriver]);
+
+  // Zoom based on current view
+  useEffect(() => {
+    if (!mapRef.current || !userLocation) return;
+
+    if (currentView === 'car') {
+      mapRef.current.flyTo({
+        center: [userLocation.longitude, userLocation.latitude],
+        zoom: 16,
+        duration: 1000
+      });
+    } else if (currentView === 'location') {
+      mapRef.current.flyTo({
+        center: [userLocation.longitude, userLocation.latitude],
+        zoom: 12,
+        duration: 1000
       });
     }
-
-    const interval = setInterval(() => {
-      demoTrucksRef.current.forEach(truck => {
-        const speed = 0.00005;
-        truck.direction += (Math.random() - 0.5) * 30;
-        const rad = (truck.direction * Math.PI) / 180;
-        truck.position[0] += Math.cos(rad) * speed;
-        truck.position[1] += Math.sin(rad) * speed;
-        truck.marker.setLngLat(truck.position);
-        (truck.marker.getElement() as HTMLElement).style.transform = `rotate(${truck.direction}deg)`;
-      });
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, [userLocation, isDriver]);
+  }, [currentView, userLocation]);
 
   // Draw route to destination with geocoding
   useEffect(() => {
@@ -239,7 +254,7 @@ export default function Map({
       }
     };
     getRoute();
-  }, [drawRoute, isDriver]);
+  }, [drawRoute, isDriver, destination, userLocation]);
 
   // Draw route based on phase
   useEffect(() => {

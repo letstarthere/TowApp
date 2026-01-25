@@ -18,6 +18,7 @@ import storageTruckIcon from "../../../attached_assets/storage-truck.png";
 import fuelIcon from "../../../attached_assets/fuel.png";
 import tireChangeIcon from "../../../attached_assets/tire-change-icon.png";
 import batteryJumpIcon from "../../../attached_assets/battery-jump.png";
+import warehouseIcon from "../../../attached_assets/towapp-warehouse.png";
 import RequestModal from "@/components/request-modal";
 import SearchingDriver from "@/components/searching-driver";
 import DriverOnWay from "@/components/driver-on-way";
@@ -125,9 +126,14 @@ export default function UserMap() {
 
   // Mapbox geocoding for address suggestions
   useEffect(() => {
+    const recentLocations = [
+      'Sandton City Mall, Johannesburg',
+      'OR Tambo International Airport'
+    ];
+    
     if (!dropoffLocation || dropoffLocation.length < 3) {
-      setAddressSuggestions([]);
-      setShowSuggestions(false);
+      setAddressSuggestions(recentLocations);
+      setShowSuggestions(dropoffLocation.length === 0);
       return;
     }
 
@@ -651,12 +657,8 @@ export default function UserMap() {
     vehicleType: 'Sedan'
   };
 
-  const [recentLocations] = useState([
-    'Sandton City Mall, Johannesburg',
-    'OR Tambo International Airport'
-  ]);
-
   const homeAddress = '3234 Tshepo Street Nellmapius Ext4 Pretoria';
+  const warehouseAddress = 'TowTech Warehouse, Centurion';
 
   const handleCarSelect = (carType: 'current' | 'different') => {
     setSelectedCar(carType);
@@ -932,6 +934,7 @@ export default function UserMap() {
             showRoute={driverAccepted}
             routePhase={routePhase}
             drawRoute={shouldDrawRoute}
+            currentView={currentView}
           />
           
           {/* Top Navigation */}
@@ -1484,7 +1487,7 @@ export default function UserMap() {
                 currentView === 'location' ? 'translate-y-0' : 'translate-y-full'
               }`}>
                 <div className="px-6 pb-6 h-full flex flex-col">
-                  <h3 className="font-bold text-black mb-6 mt-4 text-lg">Where should the vehicle be taken?</h3>
+                  <h3 className="font-bold text-black mb-6 mt-4 text-2xl">Where should the vehicle be taken?</h3>
                   
                   <div className="mb-4 relative">
                     <Input
@@ -1492,6 +1495,7 @@ export default function UserMap() {
                       placeholder="Enter destination"
                       value={dropoffLocation}
                       onChange={(e) => setDropoffLocation(e.target.value)}
+                      onFocus={() => setShowSuggestions(true)}
                       onKeyPress={(e) => {
                         if (e.key === 'Enter' && dropoffLocation) {
                           handleLocationSelect(dropoffLocation);
@@ -1522,31 +1526,22 @@ export default function UserMap() {
                   </div>
                   
                   <div className="flex-1 overflow-y-auto">
-                    <div 
-                      className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 mb-2 flex items-center space-x-3"
-                      onClick={() => handleLocationSelect(homeAddress)}
-                    >
-                      <Home className="w-5 h-5 text-orange-500" />
-                      <div>
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div 
+                        className="p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 flex flex-col items-center justify-center aspect-square"
+                        onClick={() => handleLocationSelect(homeAddress)}
+                      >
+                        <Home className="w-8 h-8 text-orange-500 mb-2" />
                         <p className="font-semibold text-sm">Home</p>
-                        <p className="text-sm text-gray-600">{homeAddress}</p>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center mb-3 mt-4">
-                      <History className="w-5 h-5 text-gray-600 mr-2" />
-                      <h4 className="font-semibold text-gray-700">Recent locations</h4>
-                    </div>
-                    <div className="space-y-2">
-                      {recentLocations.map((location, index) => (
-                        <div
-                          key={index}
-                          className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleLocationSelect(location)}
-                        >
-                          <p className="font-medium">{location}</p>
-                        </div>
-                      ))}
+                      
+                      <div 
+                        className="p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 flex flex-col items-center justify-center aspect-square"
+                        onClick={() => handleLocationSelect(warehouseAddress)}
+                      >
+                        <img src={warehouseIcon} alt="Warehouse" className="w-8 h-8 mb-2" />
+                        <p className="font-semibold text-sm">Warehouse</p>
+                      </div>
                     </div>
                   </div>
                 </div>
