@@ -74,7 +74,7 @@ export default function PersonalInfo() {
           <div className="flex justify-between items-center py-3 border-b border-gray-200">
             <div>
               <p className="text-sm text-gray-600">Name</p>
-              <p className="font-medium text-towapp-black">Sean Bampoe</p>
+              <p className="font-medium text-towapp-black">{user?.name || "Sean Bampoe"}</p>
             </div>
             <a href="#" className="text-orange-500 text-sm font-medium">Edit</a>
           </div>
@@ -90,7 +90,7 @@ export default function PersonalInfo() {
           <div className="flex justify-between items-center py-3 border-b border-gray-200">
             <div>
               <p className="text-sm text-gray-600">Phone</p>
-              <p className="font-medium text-towapp-black">{user?.phone || "+27123456789"}</p>
+              <p className="font-medium text-towapp-black">{user?.phone || "Not provided"}</p>
             </div>
             <a href="#" className="text-orange-500 text-sm font-medium">Edit</a>
           </div>

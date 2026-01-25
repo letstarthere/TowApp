@@ -8,8 +8,12 @@ import { ArrowLeft } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { GoogleLogin } from '@react-oauth/google';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
-export default function UserAuth() {
+const GOOGLE_CLIENT_ID = "598211654488-v7e4nihjjp0pqtoq4sirqknro2btpqti.apps.googleusercontent.com";
+
+function UserAuthContent() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -54,39 +58,30 @@ export default function UserAuth() {
   };
 
   const handleBack = () => {
-    setLocation("/role-selection");
+    setLocation("/");
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <div className="flex items-center justify-between p-6 border-b border-gray-100">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </Button>
-        <h1 className="text-xl font-semibold text-towapp-black">User {isLogin ? "Login" : "Signup"}</h1>
-        <div className="w-10"></div>
+    <div className="min-h-screen bg-black flex flex-col">
+      <div className="flex items-center justify-center p-6">
+        <h1 className="text-xl font-semibold text-white">User {isLogin ? "Login" : "Signup"}</h1>
       </div>
 
       <div className="flex-1 flex flex-col justify-center px-6">
-        <Card className="w-full max-w-sm mx-auto">
+        <Card className="w-full max-w-sm mx-auto bg-gray-900 border-gray-800">
           <CardContent className="p-6">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-towapp-black mb-2">
-                {isLogin ? "Welcome Back" : "Create Account"}
+              <h2 className="text-2xl font-bold text-white mb-2">
+                {isLogin ? "Sign In" : "Create Account"}
               </h2>
-              <p className="text-gray-600">
+              <p className="text-gray-400">
                 {isLogin ? "Enter your details to continue" : "Enter your details to get started"}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-300">
                   Email Address
                 </Label>
                 <Input
@@ -94,7 +89,7 @@ export default function UserAuth() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-2 w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-towapp-orange focus:border-towapp-orange"
+                  className="mt-2 w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:ring-2 focus:ring-towapp-orange focus:border-towapp-orange"
                   placeholder="Enter your email"
                   required
                 />
@@ -102,7 +97,7 @@ export default function UserAuth() {
 
               {!isLogin && (
                 <div>
-                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="name" className="text-sm font-medium text-gray-300">
                     Full Name
                   </Label>
                   <Input
@@ -110,7 +105,7 @@ export default function UserAuth() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="mt-2 w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-towapp-orange focus:border-towapp-orange"
+                    className="mt-2 w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:ring-2 focus:ring-towapp-orange focus:border-towapp-orange"
                     placeholder="Enter your full name"
                     required
                   />
@@ -118,7 +113,7 @@ export default function UserAuth() {
               )}
 
               <div>
-                <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="phone" className="text-sm font-medium text-gray-300">
                   Phone Number
                 </Label>
                 <Input
@@ -126,7 +121,7 @@ export default function UserAuth() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="mt-2 w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-towapp-orange focus:border-towapp-orange"
+                  className="mt-2 w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:ring-2 focus:ring-towapp-orange focus:border-towapp-orange"
                   placeholder="Enter your phone number"
                   required
                 />
@@ -141,8 +136,56 @@ export default function UserAuth() {
               </Button>
             </form>
 
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-700"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-900 text-gray-400">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={(credentialResponse) => {
+                  console.log(credentialResponse);
+                  // Decode JWT and extract user info
+                  const token = credentialResponse.credential;
+                  if (token) {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+                      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+                    ).join(''));
+                    const userData = JSON.parse(jsonPayload);
+                    
+                    // Save user data
+                    const user = {
+                      email: userData.email,
+                      name: userData.name,
+                      phone: '',
+                      userType: 'user'
+                    };
+                    localStorage.setItem('user', JSON.stringify(user));
+                    queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+                    setLocation("/user-map");
+                  }
+                }}
+                onError={() => {
+                  toast({
+                    title: "Error",
+                    description: "Google sign-in failed",
+                    variant: "destructive",
+                  });
+                }}
+                theme="filled_black"
+                size="large"
+                width="300"
+              />
+            </div>
+
             <div className="text-center mt-6">
-              <p className="text-gray-600">
+              <p className="text-gray-400">
                 {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
                 <button
                   onClick={() => setIsLogin(!isLogin)}
@@ -156,5 +199,13 @@ export default function UserAuth() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function UserAuth() {
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <UserAuthContent />
+    </GoogleOAuthProvider>
   );
 }

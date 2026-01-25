@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import logoPath from "@assets/1_1752240565195.png";
+import logoPath from "../../../attached_assets/getstarted logo_1752240922747.png";
 
 export default function Splash() {
   const [, setLocation] = useLocation();
@@ -16,15 +16,9 @@ export default function Splash() {
       
       setTimeout(() => {
         if (user) {
-          if (user.userType === 'driver') {
-            setLocation('/driver-map');
-          } else if (user.userType === 'user') {
-            setLocation('/user-map');
-          } else {
-            setLocation('/role-selection');
-          }
+          setLocation('/user-map');
         } else {
-          setLocation('/role-selection');
+          setLocation('/user-auth');
         }
       }, 800);
     }, 2500);
@@ -33,7 +27,7 @@ export default function Splash() {
   }, [setLocation, user, isLoading]);
 
   return (
-    <div className={`min-h-screen bg-white flex items-center justify-center transition-opacity duration-700 ease-in-out ${
+    <div className={`min-h-screen bg-black flex items-center justify-center transition-opacity duration-700 ease-in-out ${
       fadeOut ? 'opacity-0' : 'opacity-100'
     }`}>
       <div className="text-center">
