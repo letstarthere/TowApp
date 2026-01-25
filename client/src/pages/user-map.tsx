@@ -126,8 +126,11 @@ export default function UserMap() {
   // Request notification permission on mount
   useEffect(() => {
     const initNotifications = async () => {
-      await pushNotificationManager.initialize();
-      await pushNotificationManager.requestPermission();
+      try {
+        await pushNotificationManager.requestPermission();
+      } catch (error) {
+        console.error('Notification init failed:', error);
+      }
     };
     initNotifications();
   }, []);

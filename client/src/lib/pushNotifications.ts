@@ -31,13 +31,14 @@ class PushNotificationManager {
   }
 
   async requestPermission(): Promise<boolean> {
-    if (!('Notification' in window)) {
-      console.warn('Notifications not supported');
+    try {
+      const { LocalNotifications } = await import('@capacitor/local-notifications');
+      const result = await LocalNotifications.requestPermissions();
+      return result.display === 'granted';
+    } catch (error) {
+      console.error('Permission request failed:', error);
       return false;
     }
-
-    const permission = await Notification.requestPermission();
-    return permission === 'granted';
   }
 
   async subscribeToPush(): Promise<string | null> {
@@ -77,20 +78,26 @@ class PushNotificationManager {
 
   // Send push notification (works when app is in background)
   async sendPushNotification(payload: NotificationPayload): Promise<void> {
-    if (!this.registration) {
-      await this.initialize();
-    }
-    
-    if (this.registration && 'showNotification' in this.registration) {
-      await this.registration.showNotification(payload.title, {
-        body: payload.body,
-        icon: payload.icon || '/assets/blackapplogo.png',
-        badge: payload.badge || '/assets/blackapplogo.png',
-        tag: payload.tag,
-        data: payload.data,
-        requireInteraction: true,
-        vibrate: [200, 100, 200]
+    try {
+      // Use Capacitor Local Notifications for mobile
+      const { LocalNotifications } = await import('@capacitor/local-notifications');
+      
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            title: payload.title,
+            body: payload.body,
+            id: Date.now(),
+            schedule: { at: new Date(Date.now() + 100) },
+            sound: undefined,
+            attachments: undefined,
+            actionTypeId: '',
+            extra: payload.data
+          }
+        ]
       });
+    } catch (error) {
+      console.error('Push notification failed:', error);
     }
   }
 
