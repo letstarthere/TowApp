@@ -58,7 +58,6 @@ export default function Map({
       zoom: 15,
       attributionControl: false,
       scrollZoom: false,
-      dragPan: false,
       touchZoomRotate: false,
       doubleClickZoom: false
     });

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
-import { User, History, Navigation, Star, Truck, ChevronDown, CreditCard, Search, X, Home, MapPin } from "lucide-react";
+import { User, History, Navigation, Star, Truck, ChevronDown, CreditCard, Search, X, Home, MapPin, Calendar, Package, Fuel, Wrench, Zap } from "lucide-react";
 import applePayLogo from "@assets/Apple_Pay-Logo.wine.svg";
 import mastercardLogo from "../../../attached_assets/mastercard.jpg";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -77,6 +77,8 @@ export default function UserMap() {
   const [autocomplete, setAutocomplete] = useState<any>(null);
   const [mapKey, setMapKey] = useState(0);
   const [shouldDrawRoute, setShouldDrawRoute] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
   const { user } = useAuth();
   const { location, error: locationError } = useGeolocation();
@@ -112,33 +114,32 @@ export default function UserMap() {
     }
   });
 
-  // Load Google Maps for autocomplete
+  // Mapbox geocoding for address suggestions
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyAgl6sJeKZ83uP9iD8kv5WXqka629pZ2bA&libraries=places`;
-    script.async = true;
-    script.onload = () => {
-      if (window.google?.maps?.places && dropoffInputRef.current && !autocomplete) {
-        const autocompleteInstance = new window.google.maps.places.Autocomplete(
-          dropoffInputRef.current,
-          {
-            componentRestrictions: { country: 'za' },
-            fields: ['formatted_address']
-          }
+    if (!dropoffLocation || dropoffLocation.length < 3) {
+      setAddressSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const fetchSuggestions = async () => {
+      try {
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(dropoffLocation)}.json?access_token=pk.eyJ1Ijoic2VhbmJhbXBvZS0xMjMiLCJhIjoiY21rbnkzNWZ3MDBrYjNscW4yNGJsbHBxYiJ9.BJHCl5yY8vUv_1lwOgMjuA&country=za&limit=5`
         );
-        
-        autocompleteInstance.addListener('place_changed', () => {
-          const place = autocompleteInstance.getPlace();
-          if (place.formatted_address) {
-            setDropoffLocation(place.formatted_address);
-          }
-        });
-        
-        setAutocomplete(autocompleteInstance);
+        const data = await response.json();
+        if (data.features) {
+          setAddressSuggestions(data.features.map((f: any) => f.place_name));
+          setShowSuggestions(true);
+        }
+      } catch (error) {
+        console.error('Geocoding error:', error);
       }
     };
-    document.head.appendChild(script);
-  }, [autocomplete]);
+
+    const timer = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(timer);
+  }, [dropoffLocation]);
 
   // Load service selection from localStorage
   useEffect(() => {
@@ -349,7 +350,6 @@ export default function UserMap() {
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [currentPhotoSide, setCurrentPhotoSide] = useState<string>('');
   const [vehicleSearch, setVehicleSearch] = useState(() => localStorage.getItem('vehicleSearch') || '');
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(() => {
     const saved = localStorage.getItem('selectedVehicle');
     return saved ? JSON.parse(saved) : null;
@@ -647,7 +647,7 @@ export default function UserMap() {
     'OR Tambo International Airport'
   ]);
 
-  const homeAddress = '123 Main St, Johannesburg';
+  const homeAddress = '3234 Tshepo Street Nellmapius Ext4 Pretoria';
 
   const handleCarSelect = (carType: 'current' | 'different') => {
     setSelectedCar(carType);
@@ -933,7 +933,7 @@ export default function UserMap() {
             dragHeight >= 70 ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}
             style={{
-              bottom: `calc(${dragHeight}vh + 1rem)`
+              bottom: `calc(${dragHeight}vh + 0.3rem)`
             }}
           >
             <Button
@@ -1025,8 +1025,8 @@ export default function UserMap() {
             <div className="px-6 h-full flex flex-col">
               {currentView === 'car' && (
                 <>
-                  <div className="mb-4 mt-4">
-                    <h3 className="font-bold text-black text-lg">Hey there, need help?</h3>
+                  <div className="mb-3 mt-4">
+                    <h3 className="font-bold text-black text-xl">Hey there, need help?</h3>
                   </div>
                   <div className="space-y-4 flex-1">
                     <div 
@@ -1050,18 +1050,18 @@ export default function UserMap() {
                 </>
               )}
               {currentView !== 'car' && (
-                <div className="mb-6 mt-4">
+                <div className="mb-4 mt-4">
                 {currentView === 'car' && (
-                  <h3 className="font-bold text-black text-lg">Vehicle Information</h3>
+                  <h3 className="font-bold text-black text-xl">Vehicle Information</h3>
                 )}
                 {currentView === 'location' && (
-                  <h3 className="font-bold text-black text-lg">Where should the vehicle be taken?</h3>
+                  <h3 className="font-bold text-black text-xl">Where should the vehicle be taken?</h3>
                 )}
                 {currentView === 'confirm' && selectedDriver && (
-                  <h3 className="font-bold text-black text-lg">Confirm Request</h3>
+                  <h3 className="font-bold text-black text-xl">Confirm Request</h3>
                 )}
                 {currentView === 'trucks' && (
-                  <h3 className="font-bold text-black text-lg">Standard Tow Service</h3>
+                  <h3 className="font-bold text-black text-xl">Standard Tow Service</h3>
                 )}
               </div>
               )}
@@ -1237,7 +1237,7 @@ export default function UserMap() {
                         ←
                       </Button>
                     )}
-                    <h3 className="font-bold text-black text-lg">
+                    <h3 className="font-bold text-black text-xl">
                       {showCarDetails ? 'Vehicle Information' : 'Hey there, need help?'}
                     </h3>
                   </div>
@@ -1274,22 +1274,29 @@ export default function UserMap() {
                         </div>
                       </div>
                       
-                      <div 
-                        className="p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-all duration-300"
-                        onClick={() => {
-                          // TODO: Implement schedule tow
-                          toast({
-                            title: "Coming Soon",
-                            description: "Schedule a tow feature will be available soon",
-                          });
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold">Schedule a Tow</p>
-                            <p className="text-sm text-gray-600">Book for later</p>
+                      <div className="mt-4">
+                        <p className="text-sm font-medium text-gray-700 mb-3">Other Services</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="bg-gray-100 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
+                            <Calendar className="w-6 h-6 text-gray-600 mb-1" />
+                            <span className="text-xs text-gray-700">Schedule</span>
                           </div>
-                          <ChevronDown className="h-5 w-5 text-gray-400" />
+                          <div className="bg-gray-100 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
+                            <Package className="w-6 h-6 text-gray-600 mb-1" />
+                            <span className="text-xs text-gray-700">Hauling</span>
+                          </div>
+                          <div className="bg-gray-100 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
+                            <Fuel className="w-6 h-6 text-gray-600 mb-1" />
+                            <span className="text-xs text-gray-700">Fuel Delivery</span>
+                          </div>
+                          <div className="bg-gray-100 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
+                            <Wrench className="w-6 h-6 text-gray-600 mb-1" />
+                            <span className="text-xs text-gray-700">Flat Tire</span>
+                          </div>
+                          <div className="bg-gray-100 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
+                            <Zap className="w-6 h-6 text-gray-600 mb-1" />
+                            <span className="text-xs text-gray-700">Battery Jump</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1470,11 +1477,30 @@ export default function UserMap() {
                       onKeyPress={(e) => {
                         if (e.key === 'Enter' && dropoffLocation) {
                           handleLocationSelect(dropoffLocation);
+                          setShowSuggestions(false);
                         }
                       }}
                       className="w-full p-4 pr-12 text-lg border-2 border-gray-200 rounded-xl"
                     />
                     <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    
+                    {showSuggestions && addressSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1 max-h-60 overflow-y-auto">
+                        {addressSuggestions.map((suggestion, index) => (
+                          <div
+                            key={index}
+                            className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                            onClick={() => {
+                              setDropoffLocation(suggestion);
+                              setShowSuggestions(false);
+                              handleLocationSelect(suggestion);
+                            }}
+                          >
+                            <p className="text-sm">{suggestion}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex-1 overflow-y-auto">
