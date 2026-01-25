@@ -87,7 +87,12 @@ export default function UserMap() {
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(() => {
-    return !localStorage.getItem('welcomeShown');
+    const hasShown = localStorage.getItem('welcomeShown');
+    const shouldShow = !hasShown;
+    if (shouldShow) {
+      localStorage.setItem('welcomeShown', 'true');
+    }
+    return shouldShow;
   });
   
   const { user } = useAuth();
@@ -131,9 +136,13 @@ export default function UserMap() {
       'OR Tambo International Airport'
     ];
     
+    if (!showSuggestions) {
+      setAddressSuggestions([]);
+      return;
+    }
+    
     if (!dropoffLocation || dropoffLocation.length < 3) {
       setAddressSuggestions(recentLocations);
-      setShowSuggestions(dropoffLocation.length === 0);
       return;
     }
 
@@ -145,7 +154,6 @@ export default function UserMap() {
         const data = await response.json();
         if (data.features) {
           setAddressSuggestions(data.features.map((f: any) => f.place_name));
-          setShowSuggestions(true);
         }
       } catch (error) {
         console.error('Geocoding error:', error);
@@ -154,7 +162,7 @@ export default function UserMap() {
 
     const timer = setTimeout(fetchSuggestions, 300);
     return () => clearTimeout(timer);
-  }, [dropoffLocation]);
+  }, [dropoffLocation, showSuggestions]);
 
   // Load service selection from localStorage
   useEffect(() => {
@@ -679,10 +687,10 @@ export default function UserMap() {
 
   const handleLocationSelect = (location: string) => {
     setDropoffLocation(location);
+    setShowSuggestions(false);
     setCurrentView('trucks');
     setDragHeight(80);
     setShouldDrawRoute(true);
-    setTimeout(() => setMapKey(prev => prev + 1), 100);
   };
 
   const handleDriverSelect = (driver: MockDriver) => {
@@ -868,10 +876,7 @@ export default function UserMap() {
     <>
       {showWelcomePopup && (
         <WelcomePopup
-          onClose={() => {
-            setShowWelcomePopup(false);
-            localStorage.setItem('welcomeShown', 'true');
-          }}
+          onClose={() => setShowWelcomePopup(false)}
         />
       )}
       
@@ -971,7 +976,11 @@ export default function UserMap() {
               className="w-12 h-12 bg-orange-500 rounded-full shadow-lg hover:bg-orange-600"
               onClick={() => {
                 if (location) {
-                  setMapKey(prev => prev + 1);
+                  mapRef.current?.flyTo({
+                    center: [location.longitude, location.latitude],
+                    zoom: 16,
+                    duration: 1000
+                  });
                 }
               }}
             >
