@@ -213,7 +213,7 @@ export default function Map({
 
   // Draw route to destination with geocoding
   useEffect(() => {
-    if (!mapRef.current || !userLocation || isDriver || !destination || !drawRoute || !destination.trim()) return;
+    if (!mapRef.current || !userLocation || isDriver || !destination || !destination.trim()) return;
 
     const getRoute = async () => {
       try {
@@ -262,7 +262,7 @@ export default function Map({
       }
     };
     getRoute();
-  }, [drawRoute, isDriver, destination, userLocation]);
+  }, [isDriver, destination, userLocation]);
 
   // Draw route based on phase
   useEffect(() => {

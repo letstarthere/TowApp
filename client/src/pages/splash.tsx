@@ -15,11 +15,7 @@ export default function Splash() {
       setFadeOut(true);
       
       setTimeout(() => {
-        if (user) {
-          setLocation('/user-map');
-        } else {
-          setLocation('/user-auth');
-        }
+        setLocation('/user-map');
       }, 800);
     }, 2500);
 
