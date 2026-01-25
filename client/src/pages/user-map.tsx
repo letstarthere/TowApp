@@ -79,6 +79,31 @@ export default function UserMap() {
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
   const [startHeight, setStartHeight] = useState(40);
+  
+  // Fixed heights for each view
+  const viewHeights = {
+    car: 70,
+    location: 50,
+    confirmAddress: 25,
+    trucks: 80,
+    confirm: 70,
+    searching: 40,
+    towing: 40
+  };
+  
+  // Update height when view changes
+  useEffect(() => {
+    if (currentView === 'car') setDragHeight(viewHeights.car);
+    else if (currentView === 'location') setDragHeight(viewHeights.location);
+    else if (currentView === 'confirmAddress') setDragHeight(viewHeights.confirmAddress);
+    else if (currentView === 'trucks') setDragHeight(viewHeights.trucks);
+    else if (currentView === 'confirm') setDragHeight(viewHeights.confirm);
+  }, [currentView]);
+  
+  useEffect(() => {
+    if (isSearching) setDragHeight(viewHeights.searching);
+    if (towingInProgress) setDragHeight(viewHeights.towing);
+  }, [isSearching, towingInProgress]);
   const dropoffInputRef = useRef<HTMLInputElement>(null);
   const [autocomplete, setAutocomplete] = useState<any>(null);
   const [mapKey, setMapKey] = useState(0);
@@ -663,16 +688,13 @@ export default function UserMap() {
     setSelectedCar(carType);
     if (carType === 'different') {
       setShowCarDetails(true);
-      setDragHeight(95);
     } else {
       setShowCarDetails(true);
-      setDragHeight(80);
     }
   };
 
   const handleCarConfirm = () => {
     setCurrentView('location');
-    setDragHeight(50);
     setShowCarDetails(false);
   };
 
@@ -680,21 +702,18 @@ export default function UserMap() {
     setDropoffLocation(location);
     setShowSuggestions(false);
     setCurrentView('confirmAddress');
-    setDragHeight(25);
     setShouldDrawRoute(true);
     console.log('Route should draw to:', location);
   };
 
   const handleConfirmAddress = () => {
     setCurrentView('trucks');
-    setDragHeight(80);
   };
 
   const handleDriverSelect = (driver: MockDriver) => {
     setSelectedDriver(driver);
     setIsCardTransitioning(true);
     setCurrentView('confirm');
-    setDragHeight(70);
     
     // Reset blur after transition completes
     setTimeout(() => {
@@ -708,7 +727,6 @@ export default function UserMap() {
 
   const handleBackToLocation = () => {
     setCurrentView('location');
-    setDragHeight(50);
   };
 
   const handleRequestConfirm = async () => {
@@ -728,7 +746,6 @@ export default function UserMap() {
     setDropoffLocation('');
     
     setIsSearching(true);
-    setDragHeight(40); // Slide down to 40% when searching
     
     // For testing, simulate the request process
     setTimeout(() => {
@@ -776,7 +793,6 @@ export default function UserMap() {
           // Start towing process after 10 more seconds
           setTimeout(() => {
             setTowingInProgress(true);
-            setDragHeight(50);
           }, 10000);
         }, 10000);
       }, 3000);
@@ -924,7 +940,6 @@ export default function UserMap() {
             setDriverAccepted(false);
             setAssignedDriver(null);
             setCurrentView('car');
-            setDragHeight(40);
           }}
         />
       ) : (
@@ -988,8 +1003,8 @@ export default function UserMap() {
             borderTopRightRadius: '1.5rem'
           }}
         >
-          {/* Drag Handle - only show when not on initial car view */}
-          {!isSearching && !towingInProgress && (
+          {/* Drag Handle - Bezel for all views */}
+          {!isSearching && !towingInProgress && !drivingToDestination && !destinationArrived && (
             <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-6"></div>
           )}
           
@@ -1006,7 +1021,6 @@ export default function UserMap() {
               onComplete={() => {
                 setTowingInProgress(false);
                 setDrivingToDestination(true);
-                setDragHeight(40);
               }}
             />
           ) : drivingToDestination ? (
@@ -1018,7 +1032,6 @@ export default function UserMap() {
               onDestinationArrived={() => {
                 setDrivingToDestination(false);
                 setDestinationArrived(true);
-                setDragHeight(80);
               }}
             />
           ) : driverAccepted && assignedDriver && location ? (
@@ -1052,7 +1065,6 @@ export default function UserMap() {
                       }`}
                       onClick={() => {
                         setIsMinimized(false);
-                        setDragHeight(50);
                       }}
                     >
                       <div className="flex items-center justify-between">
@@ -1208,7 +1220,6 @@ export default function UserMap() {
                     onClick={() => {
                       setCurrentView('car');
                       setShowCarDetails(false);
-                      setDragHeight(50);
                     }}
                     className="flex flex-col items-center space-y-1"
                   >
@@ -1247,7 +1258,6 @@ export default function UserMap() {
                         onClick={() => {
                           setShowCarDetails(false);
                           setSelectedCar('current');
-                          setDragHeight(70);
                         }}
                         className="mr-2 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200"
                       >
