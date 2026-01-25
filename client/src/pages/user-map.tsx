@@ -1296,23 +1296,23 @@ export default function UserMap() {
                         <p className="text-sm font-medium text-gray-700 mb-3">Other Services</p>
                         <div className="grid grid-cols-3 gap-2">
                           <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <img src={scheduleIcon} alt="Schedule" className="w-8 h-8 mb-1" />
+                            <img src={scheduleIcon} alt="Schedule" className="w-12 h-12 mb-1" />
                             <span className="text-xs text-gray-700">Schedule</span>
                           </div>
                           <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <img src={storageTruckIcon} alt="Pickup & Delivery" className="w-8 h-8 mb-1" />
+                            <img src={storageTruckIcon} alt="Pickup & Delivery" className="w-12 h-12 mb-1" />
                             <span className="text-xs text-gray-700">Pickup & Delivery</span>
                           </div>
                           <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <img src={fuelIcon} alt="Fuel Delivery" className="w-8 h-8 mb-1" />
+                            <img src={fuelIcon} alt="Fuel Delivery" className="w-12 h-12 mb-1" />
                             <span className="text-xs text-gray-700">Fuel Delivery</span>
                           </div>
                           <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <img src={tireChangeIcon} alt="Flat Tire" className="w-8 h-8 mb-1" />
+                            <img src={tireChangeIcon} alt="Flat Tire" className="w-12 h-12 mb-1" />
                             <span className="text-xs text-gray-700">Flat Tire</span>
                           </div>
                           <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <img src={batteryJumpIcon} alt="Battery Jump" className="w-8 h-8 mb-1" />
+                            <img src={batteryJumpIcon} alt="Battery Jump" className="w-12 h-12 mb-1" />
                             <span className="text-xs text-gray-700">Battery Jump</span>
                           </div>
                         </div>
