@@ -39,7 +39,13 @@ declare global {
 export default function UserMap() {
   const [, setLocation] = useLocation();
   const [pickupLocation, setPickupLocation] = useState("Current Location");
-  const [dropoffLocation, setDropoffLocation] = useState(() => localStorage.getItem('dropoffLocation') || '');
+  const [dropoffLocation, setDropoffLocation] = useState(() => {
+    try {
+      return localStorage.getItem('dropoffLocation') || '';
+    } catch {
+      return '';
+    }
+  });
   
   // Wrap everything in try-catch
   useEffect(() => {
@@ -53,20 +59,32 @@ export default function UserMap() {
   
   // Save dropoff location to localStorage
   useEffect(() => {
-    localStorage.setItem('dropoffLocation', dropoffLocation);
+    try {
+      localStorage.setItem('dropoffLocation', dropoffLocation);
+    } catch (e) {
+      console.error('localStorage error:', e);
+    }
   }, [dropoffLocation]);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<MockDriver | null>(null);
   const [nearestDriver, setNearestDriver] = useState<MockDriver | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const [currentView, setCurrentView] = useState<'car' | 'location' | 'confirmAddress' | 'trucks' | 'confirm'>(() => {
-    const saved = localStorage.getItem('currentView');
-    return (saved as any) || 'car';
+    try {
+      const saved = localStorage.getItem('currentView');
+      return (saved as any) || 'car';
+    } catch {
+      return 'car';
+    }
   });
   
   // Save current view to localStorage
   useEffect(() => {
-    localStorage.setItem('currentView', currentView);
+    try {
+      localStorage.setItem('currentView', currentView);
+    } catch (e) {
+      console.error('localStorage error:', e);
+    }
   }, [currentView]);
   const [isBottomSheetVisible, setIsBottomSheetVisible] = useState(false);
   const [isCardTransitioning, setIsCardTransitioning] = useState(false);
@@ -138,7 +156,8 @@ export default function UserMap() {
     // Disabled for now
   }, []);
   
-  // WebSocket connection
+  // WebSocket connection - disabled
+  /*
   useWebSocket(user?.id || 0, (message) => {
     if (message.type === 'request_accepted') {
       const driver = {
@@ -148,7 +167,7 @@ export default function UserMap() {
         licensePlate: 'GT-1234-GP',
         rating: 4.8,
         phone: '+27123456700',
-        currentLatitude: -25.7483, // 9 Havelock Rd, Willow Park Manor, Pretoria
+        currentLatitude: -25.7483,
         currentLongitude: 28.2299
       };
       
@@ -159,6 +178,7 @@ export default function UserMap() {
       setShowRequestModal(false);
     }
   });
+  */
 
   // Mapbox geocoding for address suggestions
   useEffect(() => {
