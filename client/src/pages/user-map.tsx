@@ -125,14 +125,7 @@ export default function UserMap() {
   
   // Request notification permission on mount
   useEffect(() => {
-    const initNotifications = async () => {
-      try {
-        await pushNotificationManager.requestPermission();
-      } catch (error) {
-        console.error('Notification init failed:', error);
-      }
-    };
-    initNotifications();
+    // Disabled for now
   }, []);
   
   // WebSocket connection
@@ -784,22 +777,11 @@ export default function UserMap() {
         setRoutePhase('pickup');
         
         pushNotificationManager.playNotificationSound();
-        pushNotificationManager.sendPushNotification({
-          title: 'Driver On The Way',
-          body: `${driver.name} is heading to your location. ETA: 8-12 min`,
-          icon: '/assets/blackapplogo.png'
-        });
         
         // Simulate driver arrival after 10 seconds
         setTimeout(() => {
           setDriverArrived(true);
           setRoutePhase('delivery');
-          
-          pushNotificationManager.sendPushNotification({
-            title: 'Driver Arrived',
-            body: `${driver.name} has arrived at your location`,
-            icon: '/assets/blackapplogo.png'
-          });
           
           // Start towing process after 10 more seconds
           setTimeout(() => {

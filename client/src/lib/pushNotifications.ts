@@ -32,9 +32,12 @@ class PushNotificationManager {
 
   async requestPermission(): Promise<boolean> {
     try {
-      const { LocalNotifications } = await import('@capacitor/local-notifications');
-      const result = await LocalNotifications.requestPermissions();
-      return result.display === 'granted';
+      if (typeof window !== 'undefined' && 'Capacitor' in window) {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
+        const result = await LocalNotifications.requestPermissions();
+        return result.display === 'granted';
+      }
+      return false;
     } catch (error) {
       console.error('Permission request failed:', error);
       return false;
@@ -79,23 +82,24 @@ class PushNotificationManager {
   // Send push notification (works when app is in background)
   async sendPushNotification(payload: NotificationPayload): Promise<void> {
     try {
-      // Use Capacitor Local Notifications for mobile
-      const { LocalNotifications } = await import('@capacitor/local-notifications');
-      
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            title: payload.title,
-            body: payload.body,
-            id: Date.now(),
-            schedule: { at: new Date(Date.now() + 100) },
-            sound: undefined,
-            attachments: undefined,
-            actionTypeId: '',
-            extra: payload.data
-          }
-        ]
-      });
+      if (typeof window !== 'undefined' && 'Capacitor' in window) {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
+        
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              title: payload.title,
+              body: payload.body,
+              id: Date.now(),
+              schedule: { at: new Date(Date.now() + 100) },
+              sound: undefined,
+              attachments: undefined,
+              actionTypeId: '',
+              extra: payload.data
+            }
+          ]
+        });
+      }
     } catch (error) {
       console.error('Push notification failed:', error);
     }
