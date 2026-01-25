@@ -86,14 +86,6 @@ export default function UserMap() {
   const [shouldDrawRoute, setShouldDrawRoute] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [showWelcomePopup, setShowWelcomePopup] = useState(() => {
-    const hasShown = localStorage.getItem('welcomeShown');
-    const shouldShow = !hasShown;
-    if (shouldShow) {
-      localStorage.setItem('welcomeShown', 'true');
-    }
-    return shouldShow;
-  });
   
   const { user } = useAuth();
   const { location, error: locationError } = useGeolocation();
@@ -886,12 +878,6 @@ export default function UserMap() {
 
   return (
     <>
-      {showWelcomePopup && (
-        <WelcomePopup
-          onClose={() => setShowWelcomePopup(false)}
-        />
-      )}
-      
       {/* DEV NAVIGATION PANEL */}
       <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white z-[100] p-2 shadow-lg">
         <div className="flex gap-2 overflow-x-auto text-xs">

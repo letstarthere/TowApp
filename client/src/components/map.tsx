@@ -193,7 +193,7 @@ export default function Map({
         center: [userLocation.longitude, userLocation.latitude],
         zoom: 16,
         duration: 1000,
-        padding: { bottom: window.innerHeight * 0.35 }
+        padding: { bottom: window.innerHeight * 0.50 }
       });
     } else if (currentView === 'location') {
       mapRef.current.flyTo({
@@ -206,7 +206,7 @@ export default function Map({
         center: [userLocation.longitude, userLocation.latitude],
         zoom: 11,
         duration: 1000,
-        padding: { bottom: window.innerHeight * 0.05 }
+        padding: { bottom: window.innerHeight * 0.15 }
       });
     }
   }, [currentView, userLocation]);
