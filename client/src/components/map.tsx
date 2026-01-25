@@ -62,7 +62,7 @@ export default function Map({
       doubleClickZoom: false
     });
     
-    mapRef.current.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+
 
     return () => {
       demoTrucksRef.current.forEach(t => t.marker.remove());

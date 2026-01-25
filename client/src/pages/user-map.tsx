@@ -13,6 +13,11 @@ import { useGeolocation } from "@/hooks/useGeolocation";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useToast } from "@/hooks/use-toast";
 import Map from "@/components/map";
+import scheduleIcon from "../../../attached_assets/schedule.png";
+import storageTruckIcon from "../../../attached_assets/storage-truck.png";
+import fuelIcon from "../../../attached_assets/fuel.png";
+import tireChangeIcon from "../../../attached_assets/tire-change-icon.png";
+import batteryJumpIcon from "../../../attached_assets/battery-jump.png";
 import RequestModal from "@/components/request-modal";
 import SearchingDriver from "@/components/searching-driver";
 import DriverOnWay from "@/components/driver-on-way";
@@ -70,7 +75,7 @@ export default function UserMap() {
   const [selectedPayment, setSelectedPayment] = useState('Apple Pay');
   const [selectedPremiumProvider, setSelectedPremiumProvider] = useState<string | null>(null);
   const [truckPricing, setTruckPricing] = useState<Record<number, number>>({});
-  const [dragHeight, setDragHeight] = useState(50); // Height as percentage
+  const [dragHeight, setDragHeight] = useState(70); // Height as percentage
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
   const [startHeight, setStartHeight] = useState(40);
@@ -943,7 +948,7 @@ export default function UserMap() {
           
           {/* Location Button */}
           <div className={`absolute right-4 z-10 transition-all duration-300 ${
-            dragHeight >= 70 ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            dragHeight >= 70 || currentView !== 'location' ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}
             style={{
               bottom: `calc(${dragHeight}vh + 0.3rem)`
@@ -1291,23 +1296,23 @@ export default function UserMap() {
                         <p className="text-sm font-medium text-gray-700 mb-3">Other Services</p>
                         <div className="grid grid-cols-3 gap-2">
                           <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <img src="../../../attached_assets/schedule.png" alt="Schedule" className="w-8 h-8 mb-1" />
+                            <img src={scheduleIcon} alt="Schedule" className="w-8 h-8 mb-1" />
                             <span className="text-xs text-gray-700">Schedule</span>
                           </div>
                           <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <img src="../../../attached_assets/storage-truck.png" alt="Pickup & Delivery" className="w-8 h-8 mb-1" />
+                            <img src={storageTruckIcon} alt="Pickup & Delivery" className="w-8 h-8 mb-1" />
                             <span className="text-xs text-gray-700">Pickup & Delivery</span>
                           </div>
                           <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <img src="../../../attached_assets/fuel.png" alt="Fuel Delivery" className="w-8 h-8 mb-1" />
+                            <img src={fuelIcon} alt="Fuel Delivery" className="w-8 h-8 mb-1" />
                             <span className="text-xs text-gray-700">Fuel Delivery</span>
                           </div>
                           <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <img src="../../../attached_assets/tire-change-icon.png" alt="Flat Tire" className="w-8 h-8 mb-1" />
+                            <img src={tireChangeIcon} alt="Flat Tire" className="w-8 h-8 mb-1" />
                             <span className="text-xs text-gray-700">Flat Tire</span>
                           </div>
                           <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <img src="../../../attached_assets/battery-jump.png" alt="Battery Jump" className="w-8 h-8 mb-1" />
+                            <img src={batteryJumpIcon} alt="Battery Jump" className="w-8 h-8 mb-1" />
                             <span className="text-xs text-gray-700">Battery Jump</span>
                           </div>
                         </div>
