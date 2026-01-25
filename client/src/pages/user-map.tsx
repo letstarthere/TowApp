@@ -21,6 +21,7 @@ import DrivingToDestination from "@/components/driving-to-destination";
 import DestinationArrived from "@/components/destination-arrived";
 import RoadAssistanceConcluded from "@/components/road-assistance-concluded";
 import TowTruckCard from "@/components/tow-truck-card";
+import WelcomePopup from "@/components/welcome-popup";
 import { pushNotificationManager } from "@/lib/pushNotifications";
 import type { DriverWithUser, MockDriver } from "@/lib/types";
 
@@ -79,6 +80,9 @@ export default function UserMap() {
   const [shouldDrawRoute, setShouldDrawRoute] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showWelcomePopup, setShowWelcomePopup] = useState(() => {
+    return !localStorage.getItem('welcomeShown');
+  });
   
   const { user } = useAuth();
   const { location, error: locationError } = useGeolocation();
@@ -847,6 +851,15 @@ export default function UserMap() {
 
   return (
     <>
+      {showWelcomePopup && (
+        <WelcomePopup
+          onClose={() => {
+            setShowWelcomePopup(false);
+            localStorage.setItem('welcomeShown', 'true');
+          }}
+        />
+      )}
+      
       {/* DEV NAVIGATION PANEL */}
       <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white z-[100] p-2 shadow-lg">
         <div className="flex gap-2 overflow-x-auto text-xs">
@@ -1026,7 +1039,7 @@ export default function UserMap() {
               {currentView === 'car' && (
                 <>
                   <div className="mb-3 mt-4">
-                    <h3 className="font-bold text-black text-xl">Hey there, need help?</h3>
+                    <h3 className="font-bold text-black text-2xl">Hey there, need help?</h3>
                   </div>
                   <div className="space-y-4 flex-1">
                     <div 
@@ -1052,16 +1065,16 @@ export default function UserMap() {
               {currentView !== 'car' && (
                 <div className="mb-4 mt-4">
                 {currentView === 'car' && (
-                  <h3 className="font-bold text-black text-xl">Vehicle Information</h3>
+                  <h3 className="font-bold text-black text-2xl">Vehicle Information</h3>
                 )}
                 {currentView === 'location' && (
-                  <h3 className="font-bold text-black text-xl">Where should the vehicle be taken?</h3>
+                  <h3 className="font-bold text-black text-2xl">Where should the vehicle be taken?</h3>
                 )}
                 {currentView === 'confirm' && selectedDriver && (
-                  <h3 className="font-bold text-black text-xl">Confirm Request</h3>
+                  <h3 className="font-bold text-black text-2xl">Confirm Request</h3>
                 )}
                 {currentView === 'trucks' && (
-                  <h3 className="font-bold text-black text-xl">Standard Tow Service</h3>
+                  <h3 className="font-bold text-black text-2xl">Standard Tow Service</h3>
                 )}
               </div>
               )}
@@ -1237,7 +1250,7 @@ export default function UserMap() {
                         ←
                       </Button>
                     )}
-                    <h3 className="font-bold text-black text-xl">
+                    <h3 className="font-bold text-black text-2xl">
                       {showCarDetails ? 'Vehicle Information' : 'Hey there, need help?'}
                     </h3>
                   </div>
@@ -1277,24 +1290,24 @@ export default function UserMap() {
                       <div className="mt-4">
                         <p className="text-sm font-medium text-gray-700 mb-3">Other Services</p>
                         <div className="grid grid-cols-3 gap-2">
-                          <div className="bg-gray-100 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <Calendar className="w-6 h-6 text-gray-600 mb-1" />
+                          <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
+                            <img src="/attached_assets/schedule.png" alt="Schedule" className="w-8 h-8 mb-1" />
                             <span className="text-xs text-gray-700">Schedule</span>
                           </div>
-                          <div className="bg-gray-100 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <Package className="w-6 h-6 text-gray-600 mb-1" />
-                            <span className="text-xs text-gray-700">Hauling</span>
+                          <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
+                            <img src="/attached_assets/storage-truck.png" alt="Pickup & Delivery" className="w-8 h-8 mb-1" />
+                            <span className="text-xs text-gray-700">Pickup & Delivery</span>
                           </div>
-                          <div className="bg-gray-100 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <Fuel className="w-6 h-6 text-gray-600 mb-1" />
+                          <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
+                            <img src="/attached_assets/fuel.png" alt="Fuel Delivery" className="w-8 h-8 mb-1" />
                             <span className="text-xs text-gray-700">Fuel Delivery</span>
                           </div>
-                          <div className="bg-gray-100 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <Wrench className="w-6 h-6 text-gray-600 mb-1" />
+                          <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
+                            <img src="/attached_assets/tire-change-icon.png" alt="Flat Tire" className="w-8 h-8 mb-1" />
                             <span className="text-xs text-gray-700">Flat Tire</span>
                           </div>
-                          <div className="bg-gray-100 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
-                            <Zap className="w-6 h-6 text-gray-600 mb-1" />
+                          <div className="bg-gray-100 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200">
+                            <img src="/attached_assets/battery-jump.png" alt="Battery Jump" className="w-8 h-8 mb-1" />
                             <span className="text-xs text-gray-700">Battery Jump</span>
                           </div>
                         </div>
