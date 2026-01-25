@@ -41,6 +41,16 @@ export default function UserMap() {
   const [pickupLocation, setPickupLocation] = useState("Current Location");
   const [dropoffLocation, setDropoffLocation] = useState(() => localStorage.getItem('dropoffLocation') || '');
   
+  // Wrap everything in try-catch
+  useEffect(() => {
+    const handleError = (e: ErrorEvent) => {
+      console.error('App error:', e.error);
+      e.preventDefault();
+    };
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+  
   // Save dropoff location to localStorage
   useEffect(() => {
     localStorage.setItem('dropoffLocation', dropoffLocation);
