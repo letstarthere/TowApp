@@ -50,7 +50,7 @@ export default function UserMap() {
   const [selectedDriver, setSelectedDriver] = useState<MockDriver | null>(null);
   const [nearestDriver, setNearestDriver] = useState<MockDriver | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [currentView, setCurrentView] = useState<'car' | 'location' | 'trucks' | 'confirm'>(() => {
+  const [currentView, setCurrentView] = useState<'car' | 'location' | 'confirmAddress' | 'trucks' | 'confirm'>(() => {
     const saved = localStorage.getItem('currentView');
     return (saved as any) || 'car';
   });
@@ -688,9 +688,14 @@ export default function UserMap() {
   const handleLocationSelect = (location: string) => {
     setDropoffLocation(location);
     setShowSuggestions(false);
+    setCurrentView('confirmAddress');
+    setDragHeight(40);
+    setShouldDrawRoute(true);
+  };
+
+  const handleConfirmAddress = () => {
     setCurrentView('trucks');
     setDragHeight(80);
-    setShouldDrawRoute(true);
   };
 
   const handleDriverSelect = (driver: MockDriver) => {
@@ -1556,11 +1561,30 @@ export default function UserMap() {
                         className="p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 flex flex-col items-center justify-center aspect-square"
                         onClick={() => handleLocationSelect(warehouseAddress)}
                       >
-                        <img src={warehouseIcon} alt="Warehouse" className="w-8 h-8 mb-2" />
+                        <img src={warehouseIcon} alt="Warehouse" className="w-12 h-12 mb-2" />
                         <p className="font-semibold text-sm">Warehouse</p>
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+              
+              {/* Confirm Address View */}
+              <div className={`absolute inset-0 transition-transform duration-500 ease-in-out ${
+                currentView === 'confirmAddress' ? 'translate-y-0' : 'translate-y-full'
+              }`}>
+                <div className="px-6 pb-6 h-full flex flex-col justify-center">
+                  <div className="mb-6">
+                    <p className="text-sm text-gray-600 mb-2">Destination</p>
+                    <p className="text-lg font-semibold text-black">{dropoffLocation}</p>
+                  </div>
+                  
+                  <Button
+                    onClick={handleConfirmAddress}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-xl font-semibold text-lg"
+                  >
+                    Confirm Address
+                  </Button>
                 </div>
               </div>
               
