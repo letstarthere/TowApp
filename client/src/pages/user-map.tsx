@@ -689,7 +689,7 @@ export default function UserMap() {
     setDropoffLocation(location);
     setShowSuggestions(false);
     setCurrentView('confirmAddress');
-    setDragHeight(40);
+    setDragHeight(30);
     setShouldDrawRoute(true);
   };
 
@@ -702,7 +702,7 @@ export default function UserMap() {
     setSelectedDriver(driver);
     setIsCardTransitioning(true);
     setCurrentView('confirm');
-    setDragHeight(80); // Set to 80% for confirm view
+    setDragHeight(70);
     
     // Reset blur after transition completes
     setTimeout(() => {
@@ -942,7 +942,7 @@ export default function UserMap() {
       ) : (
         <div className="min-h-screen bg-white relative">
         {/* Map Container */}
-        <div className={`relative transition-all duration-300 ${isMinimized ? 'h-[calc(100vh-5rem)]' : 'h-[30vh]'} mt-10`}>
+        <div className={`relative transition-all duration-300 ${isMinimized ? 'h-[calc(100vh-5rem)]' : 'h-[60vh]'} mt-10`}>
           <Map
             key={mapKey}
             center={location ? { lat: location.latitude, lng: location.longitude } : undefined}
@@ -1001,7 +1001,7 @@ export default function UserMap() {
           }}
         >
           {/* Drag Handle - only show when not on initial car view */}
-          {!isSearching && !towingInProgress && (
+          {!isSearching && !towingInProgress && currentView !== 'car' && (
             <div 
               className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-6 cursor-grab active:cursor-grabbing hover:bg-gray-400 transition-colors"
               onMouseDown={handleDragStart}
@@ -1565,8 +1565,8 @@ export default function UserMap() {
               <div className={`absolute inset-0 transition-transform duration-500 ease-in-out ${
                 currentView === 'confirmAddress' ? 'translate-y-0' : 'translate-y-full'
               }`}>
-                <div className="px-6 pb-6 h-full flex flex-col justify-end">
-                  <div className="mb-4">
+                <div className="px-6 pb-6 h-full flex flex-col">
+                  <div className="mb-4 mt-4">
                     <p className="text-sm text-gray-600 mb-1">Destination</p>
                     <p className="text-lg font-semibold text-black">{dropoffLocation}</p>
                   </div>
