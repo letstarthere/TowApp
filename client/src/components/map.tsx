@@ -206,7 +206,7 @@ export default function Map({
         center: [userLocation.longitude, userLocation.latitude],
         zoom: 11,
         duration: 1000,
-        padding: { bottom: window.innerHeight * 0.15 }
+        padding: { bottom: window.innerHeight * 0.20 }
       });
     }
   }, [currentView, userLocation]);

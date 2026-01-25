@@ -680,8 +680,9 @@ export default function UserMap() {
     setDropoffLocation(location);
     setShowSuggestions(false);
     setCurrentView('confirmAddress');
-    setDragHeight(10);
+    setDragHeight(25);
     setShouldDrawRoute(true);
+    console.log('Route should draw to:', location);
   };
 
   const handleConfirmAddress = () => {
@@ -843,7 +844,9 @@ export default function UserMap() {
   };
   
   const handleMenuClick = () => {
-    setLocation("/user-profile");
+    if (user) {
+      setLocation("/user-profile");
+    }
   };
 
   if (locationError) {
