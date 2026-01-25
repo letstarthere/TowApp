@@ -192,13 +192,21 @@ export default function Map({
       mapRef.current.flyTo({
         center: [userLocation.longitude, userLocation.latitude],
         zoom: 16,
-        duration: 1000
+        duration: 1000,
+        padding: { bottom: window.innerHeight * 0.35 }
       });
     } else if (currentView === 'location') {
       mapRef.current.flyTo({
         center: [userLocation.longitude, userLocation.latitude],
         zoom: 11,
         duration: 1000
+      });
+    } else if (currentView === 'confirmAddress') {
+      mapRef.current.flyTo({
+        center: [userLocation.longitude, userLocation.latitude],
+        zoom: 11,
+        duration: 1000,
+        padding: { bottom: window.innerHeight * 0.05 }
       });
     }
   }, [currentView, userLocation]);
