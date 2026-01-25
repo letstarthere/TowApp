@@ -398,26 +398,42 @@ export default function UserMap() {
   });
 
   const [selectedCar, setSelectedCar] = useState<'current' | 'different' | null>(() => {
-    const saved = localStorage.getItem('selectedCar');
-    return (saved as any) || 'current';
+    try {
+      const saved = localStorage.getItem('selectedCar');
+      return (saved as any) || 'current';
+    } catch {
+      return 'current';
+    }
   });
   
   // Save selected car to localStorage
   useEffect(() => {
-    if (selectedCar) {
-      localStorage.setItem('selectedCar', selectedCar);
+    try {
+      if (selectedCar) {
+        localStorage.setItem('selectedCar', selectedCar);
+      }
+    } catch (e) {
+      console.error('localStorage error:', e);
     }
   }, [selectedCar]);
   const [showCarDetails, setShowCarDetails] = useState(false);
   const [carPhotos, setCarPhotos] = useState<{[key: string]: string}>(() => {
-    const saved = localStorage.getItem('carPhotos');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = localStorage.getItem('carPhotos');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
   });
   
   // Save photos to localStorage whenever they change
   useEffect(() => {
-    if (Object.keys(carPhotos).length > 0) {
-      localStorage.setItem('carPhotos', JSON.stringify(carPhotos));
+    try {
+      if (Object.keys(carPhotos).length > 0) {
+        localStorage.setItem('carPhotos', JSON.stringify(carPhotos));
+      }
+    } catch (e) {
+      console.error('localStorage error:', e);
     }
   }, [carPhotos]);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -919,7 +935,8 @@ export default function UserMap() {
 
   return (
     <>
-      {/* DEV NAVIGATION PANEL */}
+      {/* DEV NAVIGATION PANEL - TEMPORARILY DISABLED FOR DEBUGGING */}
+      {false && (
       <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white z-[100] p-2 shadow-lg">
         <div className="flex gap-2 overflow-x-auto text-xs">
           <button onClick={() => { setCurrentView('car'); setShowCarDetails(false); setDragHeight(50); }} className="px-3 py-1 bg-blue-700 rounded whitespace-nowrap">Car Select</button>
@@ -936,6 +953,7 @@ export default function UserMap() {
           <button onClick={() => { setCarPhotos({ 'Front': 'skip', 'Back': 'skip', 'Left Side': 'skip', 'Right Side': 'skip' }); }} className="px-3 py-1 bg-green-700 rounded whitespace-nowrap">Skip Photos</button>
         </div>
       </div>
+      )}
       {/* Road Assistance Concluded - Full Screen */}
       {serviceCompleted ? (
         <RoadAssistanceConcluded
