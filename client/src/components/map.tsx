@@ -205,7 +205,7 @@ export default function Map({
 
   // Draw route to destination with geocoding
   useEffect(() => {
-    if (!mapRef.current || !userLocation || isDriver || !destination || !drawRoute) return;
+    if (!mapRef.current || !userLocation || isDriver || !destination || !drawRoute || !destination.trim()) return;
 
     const getRoute = async () => {
       try {

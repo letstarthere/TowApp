@@ -722,6 +722,13 @@ export default function UserMap() {
   const handleRequestConfirm = async () => {
     if (!location || !selectedDriver) return;
 
+    // Show simulating popup
+    toast({
+      title: "Simulating Request",
+      description: "This is a simulation for testing purposes",
+      duration: 3000,
+    });
+
     // Play success sound
     pushNotificationManager.playNotificationSound();
 
@@ -935,7 +942,7 @@ export default function UserMap() {
       ) : (
         <div className="min-h-screen bg-white relative">
         {/* Map Container */}
-        <div className={`relative transition-all duration-300 ${isMinimized ? 'h-[calc(100vh-5rem)]' : 'h-[60vh]'} mt-10`}>
+        <div className={`relative transition-all duration-300 ${isMinimized ? 'h-[calc(100vh-5rem)]' : 'h-[30vh]'} mt-10`}>
           <Map
             key={mapKey}
             center={location ? { lat: location.latitude, lng: location.longitude } : undefined}
@@ -968,26 +975,11 @@ export default function UserMap() {
           </div>
           
           {/* Location Button */}
-          <div className={`absolute right-4 z-10 transition-all duration-300 ${
-            dragHeight >= 70 || currentView !== 'location' ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          }`}
-            style={{
-              bottom: `calc(${dragHeight}vh + 0.3rem)`
-            }}
-          >
+          <div className="hidden">
             <Button
               variant="ghost"
               size="icon"
               className="w-12 h-12 bg-orange-500 rounded-full shadow-lg hover:bg-orange-600"
-              onClick={() => {
-                if (location) {
-                  mapRef.current?.flyTo({
-                    center: [location.longitude, location.latitude],
-                    zoom: 16,
-                    duration: 1000
-                  });
-                }
-              }}
             >
               <Navigation className="w-5 h-5 text-white" />
             </Button>
@@ -1573,9 +1565,9 @@ export default function UserMap() {
               <div className={`absolute inset-0 transition-transform duration-500 ease-in-out ${
                 currentView === 'confirmAddress' ? 'translate-y-0' : 'translate-y-full'
               }`}>
-                <div className="px-6 pb-6 h-full flex flex-col justify-center">
-                  <div className="mb-6">
-                    <p className="text-sm text-gray-600 mb-2">Destination</p>
+                <div className="px-6 pb-6 h-full flex flex-col justify-end">
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 mb-1">Destination</p>
                     <p className="text-lg font-semibold text-black">{dropoffLocation}</p>
                   </div>
                   
@@ -1821,7 +1813,7 @@ export default function UserMap() {
                       
                       <Button
                         onClick={handleRequestConfirm}
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-xl font-semibold text-lg mb-6 animate-in fade-in duration-500 delay-1000"
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-xl font-semibold text-lg animate-in fade-in duration-500 delay-1000"
                         disabled={createRequestMutation.isPending}
                       >
                         {createRequestMutation.isPending ? 'Requesting...' : 'Confirm Request'}
