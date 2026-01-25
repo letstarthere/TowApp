@@ -27,7 +27,6 @@ import DrivingToDestination from "@/components/driving-to-destination";
 import DestinationArrived from "@/components/destination-arrived";
 import RoadAssistanceConcluded from "@/components/road-assistance-concluded";
 import TowTruckCard from "@/components/tow-truck-card";
-import WelcomePopup from "@/components/welcome-popup";
 import { pushNotificationManager } from "@/lib/pushNotifications";
 import type { DriverWithUser, MockDriver } from "@/lib/types";
 
