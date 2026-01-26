@@ -86,6 +86,14 @@ function Router() {
         <Route path="/payment-methods" component={PaymentMethods} />
         <Route path="/trip-history" component={TripHistory} />
         <Route path="/user-vehicles" component={UserVehicles} />
+        <Route path="/driver-profile" component={DriverProfile} />
+        <Route path="/driver/earnings" component={DriverEarnings} />
+        <Route path="/driver/job-history" component={JobHistory} />
+        <Route path="/driver/campaigns" component={ActiveCampaigns} />
+        <Route path="/driver/scheduled-jobs" component={ScheduledJobs} />
+        <Route path="/driver/support" component={DriverSupport} />
+        <Route path="/driver/invite-drivers" component={InviteDrivers} />
+        <Route path="/driver/settings" component={DriverSettings} />
         
         <Route component={NotFound} />
       </Switch>
