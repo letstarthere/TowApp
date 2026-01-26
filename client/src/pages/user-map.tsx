@@ -899,9 +899,7 @@ export default function UserMap() {
   };
   
   const handleMenuClick = () => {
-    if (user) {
-      setLocation("/user-profile");
-    }
+    setLocation("/user-profile");
   };
 
   if (locationError) {

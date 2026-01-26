@@ -2,28 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { ArrowLeft, Star, CreditCard, History, HelpCircle, Car, ChevronRight, User } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import userProfileImage from "../../../attached_assets/user_profile_image.png";
 
 export default function UserProfile() {
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
   const { toast } = useToast();
 
   const handleBack = () => {
     setLocation("/user-map");
   };
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-towapp-orange"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
