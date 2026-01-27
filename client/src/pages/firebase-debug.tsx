@@ -2,12 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { testCrash, sendTestLog, logError } from "@/lib/firebase";
 import { Capacitor } from "@capacitor/core";
-import { useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
 export default function FirebaseDebug() {
-  const [, setLocation] = useLocation();
-
   const handleTestCrash = async () => {
     if (confirm("This will crash the app. Continue?")) {
       await testCrash();
@@ -39,7 +36,7 @@ export default function FirebaseDebug() {
       <div className="max-w-2xl mx-auto">
         <Button
           variant="ghost"
-          onClick={() => setLocation("/user-map")}
+          onClick={() => window.history.back()}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
