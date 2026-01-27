@@ -43,6 +43,7 @@ import DriverDestinationArrival from "@/pages/driver-destination-arrival";
 import TripInvoice from "@/pages/trip-invoice";
 import TripRating from "@/pages/trip-rating";
 import TestInvoice from "@/pages/test-invoice";
+import FirebaseDebug from "@/pages/firebase-debug";
 
 function Router() {
   const { user, isLoading } = useAuth();
@@ -75,6 +76,7 @@ function Router() {
         <Route path="/trip-invoice" component={TripInvoice} />
         <Route path="/trip-rating" component={TripRating} />
         <Route path="/test-invoice" component={TestInvoice} />
+        <Route path="/firebase-debug" component={FirebaseDebug} />
         <Route path="/user-auth" component={UserAuth} />
         <Route path="/driver-auth" component={DriverAuth} />
         <Route path="/home" component={Home} />
