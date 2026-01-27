@@ -8,7 +8,6 @@ import applePayLogo from "@assets/Apple_Pay-Logo.wine.svg";
 import mastercardLogo from "../../../attached_assets/mastercard.jpg";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useToast } from "@/hooks/use-toast";
@@ -139,7 +138,6 @@ export default function UserMap() {
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   
-  const { user } = useAuth();
   const { location, error: locationError } = useGeolocation();
   const { toast } = useToast();
   
