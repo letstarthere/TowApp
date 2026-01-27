@@ -1005,7 +1005,7 @@ export default function UserMap() {
           />
           
           {/* Top Navigation */}
-          <div className={`absolute top-0 left-0 right-0 flex items-center p-4 z-10 transition-opacity duration-300 ${
+          <div className={`absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-10 transition-opacity duration-300 ${
             currentView === 'car' && showCarDetails && selectedCar === 'different' ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}>
             {/* Menu Icon */}
@@ -1014,6 +1014,14 @@ export default function UserMap() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </div>
+            
+            {/* Firebase Debug Button */}
+            <button
+              onClick={() => setLocation('/firebase-debug')}
+              className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg hover:bg-red-600"
+            >
+              🔥 Debug
+            </button>
           </div>
           
           {/* Location Button */}
