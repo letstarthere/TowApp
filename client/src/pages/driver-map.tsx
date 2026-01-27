@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +24,6 @@ export default function DriverMap() {
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [driverStatus, setDriverStatus] = useState<'active' | 'pending_verification' | 'suspended'>('pending_verification');
   
-  const { user } = useAuth();
   const { location } = useGeolocation();
   const { toast } = useToast();
   
@@ -44,7 +42,7 @@ export default function DriverMap() {
   }, []);
   
   // WebSocket connection
-  useWebSocket(user?.id || 0, (message) => {
+  useWebSocket(0, (message) => {
     if (message.type === 'new_request') {
       setPendingRequest(message.request);
       toast({
@@ -56,7 +54,7 @@ export default function DriverMap() {
 
   // Update driver location periodically
   useEffect(() => {
-    if (user?.driver && location) {
+    if (location) {
       const interval = setInterval(() => {
         apiRequest("PUT", "/api/drivers/location", {
           latitude: location.latitude,
@@ -66,7 +64,7 @@ export default function DriverMap() {
 
       return () => clearInterval(interval);
     }
-  }, [user?.driver, location]);
+  }, [location]);
 
   // Get driver requests
   const { data: requests } = useQuery({
@@ -202,7 +200,7 @@ export default function DriverMap() {
         <DriverMenu
           isOpen={isMenuOpen}
           onClose={() => setIsMenuOpen(false)}
-          driverName={user?.name || 'John Smith'}
+          driverName="Driver"
           reliabilityScore={95}
           acceptanceRate={88}
         />
@@ -218,8 +216,8 @@ export default function DriverMap() {
       {/* Driver Verification Modal */}
       <DriverVerificationModal
         isOpen={isVerificationPending}
-        driverName={user?.name || 'Driver'}
-        email={user?.email || 'driver@example.com'}
+        driverName="Driver"
+        email="driver@example.com"
       />
       
       {/* Notification Popup */}

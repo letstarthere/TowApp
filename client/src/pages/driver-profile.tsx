@@ -2,14 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { ArrowLeft, Star, Settings, FileText, DollarSign, History, HelpCircle } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export default function DriverProfile() {
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
   const { toast } = useToast();
 
   const logoutMutation = useMutation({
@@ -55,12 +53,10 @@ export default function DriverProfile() {
       <div className="flex-1 p-6">
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-towapp-orange rounded-full mx-auto mb-4 flex items-center justify-center">
-            <span className="text-white text-2xl font-bold">
-              {user?.name?.charAt(0)?.toUpperCase() || "D"}
-            </span>
+            <span className="text-white text-2xl font-bold">D</span>
           </div>
-          <h2 className="text-2xl font-bold text-towapp-black">{user?.name}</h2>
-          <p className="text-gray-600">{user?.driver?.companyName || "Independent Driver"}</p>
+          <h2 className="text-2xl font-bold text-towapp-black">Driver</h2>
+          <p className="text-gray-600">Independent Driver</p>
           <div className="flex items-center justify-center mt-2">
             <Star className="w-5 h-5 text-yellow-500 fill-current" />
             <span className="text-gray-600 ml-2">4.9 rating (247 reviews)</span>
@@ -74,19 +70,19 @@ export default function DriverProfile() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Name</span>
-                  <span className="font-medium">{user?.name}</span>
+                  <span className="font-medium">Driver</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Company</span>
-                  <span className="font-medium">{user?.driver?.companyName || "Independent"}</span>
+                  <span className="font-medium">Independent</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Vehicle</span>
-                  <span className="font-medium">{user?.driver?.vehicleType}</span>
+                  <span className="font-medium">Tow Truck</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">License</span>
-                  <span className="font-medium">{user?.driver?.licensePlate}</span>
+                  <span className="font-medium">ABC-123-GP</span>
                 </div>
               </div>
             </CardContent>

@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { ArrowLeft, User, Plus } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -9,7 +8,6 @@ import userProfileImage from "../../../attached_assets/user_profile_image.png";
 
 export default function PersonalInfo() {
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
   const { toast } = useToast();
 
   const logoutMutation = useMutation({
@@ -74,7 +72,7 @@ export default function PersonalInfo() {
           <div className="flex justify-between items-center py-3 border-b border-gray-200">
             <div>
               <p className="text-sm text-gray-600">Name</p>
-              <p className="font-medium text-towapp-black">{user?.name || "Sean Bampoe"}</p>
+              <p className="font-medium text-towapp-black">Sean Bampoe</p>
             </div>
             <a href="#" className="text-orange-500 text-sm font-medium">Edit</a>
           </div>
@@ -82,7 +80,7 @@ export default function PersonalInfo() {
           <div className="flex justify-between items-center py-3 border-b border-gray-200">
             <div>
               <p className="text-sm text-gray-600">Email</p>
-              <p className="font-medium text-towapp-black">{user?.email || "bampoesean@gmail.com"}</p>
+              <p className="font-medium text-towapp-black">bampoesean@gmail.com</p>
             </div>
             <a href="#" className="text-orange-500 text-sm font-medium">Edit</a>
           </div>
@@ -90,7 +88,7 @@ export default function PersonalInfo() {
           <div className="flex justify-between items-center py-3 border-b border-gray-200">
             <div>
               <p className="text-sm text-gray-600">Phone</p>
-              <p className="font-medium text-towapp-black">{user?.phone || "Not provided"}</p>
+              <p className="font-medium text-towapp-black">Not provided</p>
             </div>
             <a href="#" className="text-orange-500 text-sm font-medium">Edit</a>
           </div>
