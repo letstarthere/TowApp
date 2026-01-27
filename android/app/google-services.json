@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "362949274833",
+    "project_id": "towapp-901ac",
+    "storage_bucket": "towapp-901ac.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:362949274833:android:ed72e008b4d685323929f0",
+        "android_client_info": {
+          "package_name": "com.towtech.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBeYCaIJ6H0aaCEj2YN4i0iHZUxdjdlVB8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

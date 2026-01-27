@@ -4,6 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
+import { initializeFirebase } from "@/lib/firebase";
 import NotFound from "@/pages/not-found";
 import Splash from "@/pages/splash";
 import RoleSelection from "@/pages/role-selection";
@@ -102,6 +104,10 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    initializeFirebase();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
