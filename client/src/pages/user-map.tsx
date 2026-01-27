@@ -1020,7 +1020,7 @@ export default function UserMap() {
               onClick={() => setLocation('/firebase-debug')}
               className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg hover:bg-red-600"
             >
-              🔥 Debug
+              Debug
             </button>
           </div>
           

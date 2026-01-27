@@ -46,16 +46,6 @@ import TestInvoice from "@/pages/test-invoice";
 import FirebaseDebug from "@/pages/firebase-debug";
 
 function Router() {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-towapp-orange"></div>
-      </div>
-    );
-  }
-
   return (
     <>
       <NetworkStatus />
